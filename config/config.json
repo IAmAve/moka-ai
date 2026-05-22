@@ -1,0 +1,12 @@
+{
+  "app_name": "MOKA AI",
+  "version": "1.0.0",
+  "log_level": "INFO",
+  "max_workers": 4,
+  "voice_enabled": true,
+  "memory_backend": "sqlite",
+  "storage_path": "data/",
+  "plugins_path": "plugins/",
+  "models_path": "models/",
+  "temp_path": "temp/"
+}
