@@ -41,6 +41,31 @@ class TestServiceManager(unittest.TestCase):
     def test_get_status_returns_unknown_for_missing(self):
         self.assertEqual(self.sm.get_status("nonexistent"), ServiceStatus.UNKNOWN)
 
+    def test_start_service_sets_failed_on_exception(self):
+        class FailingService:
+            def start(self):
+                raise RuntimeError("boom")
+        svc = FailingService()
+        self.sm.register_service("fail", svc)
+        result = self.sm.start_service("fail")
+        self.assertFalse(result)
+        self.assertEqual(self.sm.get_status("fail"), ServiceStatus.FAILED)
+
+    def test_stop_service_sets_failed_on_exception(self):
+        class FailingService:
+            def __init__(self):
+                self.started = False
+            def start(self):
+                self.started = True
+            def stop(self):
+                raise RuntimeError("boom")
+        svc = FailingService()
+        self.sm.register_service("fail", svc)
+        self.sm.start_service("fail")  # first starts
+        result = self.sm.stop_service("fail")
+        self.assertFalse(result)
+        self.assertEqual(self.sm.get_status("fail"), ServiceStatus.FAILED)
+
     def test_list_services(self):
         self.sm.register_service("s1", object())
         self.sm.register_service("s2", object())

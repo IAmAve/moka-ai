@@ -38,11 +38,12 @@ class ServiceManager:
             return True
         try:
             svc = entry['service']
+            entry['status'] = ServiceStatus.STARTING
             if hasattr(svc, 'start'):
                 svc.start()
             entry['status'] = ServiceStatus.RUNNING
             return True
-        except Exception:
+        except Exception as e:
             entry['status'] = ServiceStatus.FAILED
             return False
 
@@ -55,11 +56,12 @@ class ServiceManager:
             return True
         try:
             svc = entry['service']
+            entry['status'] = ServiceStatus.STOPPING
             if hasattr(svc, 'stop'):
                 svc.stop()
             entry['status'] = ServiceStatus.STOPPED
             return True
-        except Exception:
+        except Exception as e:
             entry['status'] = ServiceStatus.FAILED
             return False
 
