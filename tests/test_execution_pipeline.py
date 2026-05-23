@@ -47,5 +47,66 @@ class TestExecutionPipeline(unittest.TestCase):
         approved = self.pipeline.approve(action_id)
         self.assertTrue(approved)
 
+    def test_snapshot_created_before_execution(self):
+        import os
+        file_path = os.path.join(self.temp_dir, "to_modify.txt")
+        with open(file_path, 'w') as f:
+            f.write("original\n")
+
+        # Register a handler that modifies a file
+        def modifier(target, params):
+            with open(target, 'w') as f:
+                f.write("new_content\n")
+        self.pipeline.register_handler("modify", modifier)
+
+        result = self.pipeline.execute("modify", file_path, {})
+        self.assertTrue(result.success)
+
+        # Verify rollback restored original
+        self.pipeline.rollback_manager.rollback(f"modify_{file_path}")
+        with open(file_path, 'r') as f:
+            self.assertEqual(f.read(), "original\n")
+
+
+
+    def test_verification_failure_triggers_rollback(self):
+        import os
+        import tempfile
+        file_path = os.path.join(self.temp_dir, "verify_test.txt")
+        with open(file_path, 'w') as f:
+            f.write("original\n")
+        
+        def failing_handler(target, params):
+            with open(target, 'w') as f:
+                f.write("new_content\n")
+            raise RuntimeError("Intentional failure")
+        
+        self.pipeline.register_handler("failing_action", failing_handler)
+        result = self.pipeline.execute("failing_action", file_path, {})
+        self.assertFalse(result.success)
+        
+        with open(file_path, 'r') as f:
+            self.assertEqual(f.read(), "original\n")
+
+
 if __name__ == '__main__':
     unittest.main()
+
+    def test_verification_failure_triggers_rollback(self):
+        import os
+        import tempfile
+        file_path = os.path.join(self.temp_dir, "verify_test.txt")
+        with open(file_path, 'w') as f:
+            f.write("original\n")
+        
+        def failing_handler(target, params):
+            with open(target, 'w') as f:
+                f.write("new_content\n")
+            raise RuntimeError("Intentional failure")
+        
+        self.pipeline.register_handler("failing_action", failing_handler)
+        result = self.pipeline.execute("failing_action", file_path, {})
+        self.assertFalse(result.success)
+        
+        with open(file_path, 'r') as f:
+            self.assertEqual(f.read(), "original\n")

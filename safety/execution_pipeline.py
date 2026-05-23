@@ -45,17 +45,29 @@ class ExecutionPipeline:
             )
             return ExecutionResult(success=False, requires_approval=True, action_id=f"{action}_{target}")
 
-        return self._execute_action(action, target, params)
+        exec_result = self._execute_action(action, target, params)
+        return self._verify_execution(exec_result, action, target)
+
+    def _verify_execution(self, result: ExecutionResult, action: str, target: str) -> ExecutionResult:
+        """Verify execution outcome and trigger rollback on failure."""
+        if not result.success and result.action_id:
+            self.rollback_manager.rollback(result.action_id)
+        return result
 
     def _execute_action(self, action: str, target: str, params: Dict[str, Any]) -> ExecutionResult:
+        # Create snapshot before execution
+        action_id = f"{action}_{target}"
+        self.rollback_manager.create_snapshot(action_id, target)
+
         handler = self._execution_handlers.get(action)
         if handler:
             try:
                 handler(target, params)
-                return ExecutionResult(success=True)
+                return ExecutionResult(success=True, action_id=action_id)
             except Exception as e:
-                return ExecutionResult(success=False, error=str(e))
-        return ExecutionResult(success=True)
+                # Verification will trigger rollback
+                return ExecutionResult(success=False, error=str(e), action_id=action_id)
+        return ExecutionResult(success=True, action_id=action_id)
 
     def register_handler(self, action: str, handler: Callable):
         self._execution_handlers[action] = handler
