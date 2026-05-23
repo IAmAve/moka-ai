@@ -36,6 +36,10 @@ class PermissionManager:
             pass
         return self.DEFAULT_CONFIG.copy()
 
+    def reload(self):
+        """Hot-reload configuration from disk without restarting."""
+        self.config = self._load_config()
+
     def get_level_for_action(self, action: str) -> PermissionLevel:
         action = action.lower()
         for level_name, level_data in self.config.get("levels", {}).items():
