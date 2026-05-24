@@ -1,0 +1,26 @@
+{
+    "greetings": {
+        "formal": "Kamusta",
+        "informal": "Kamusta!",
+        "warm": "Kamusta ka na",
+        "morning": "Magandang umaga",
+        "afternoon": "Magandang hapon",
+        "evening": "Magandang gabi"
+    },
+    "closings": {
+        "formal": "Maraming salamat.",
+        "informal": "Salamat!",
+        "encouraging": "Galing mo ang Pagtatrabaho!"
+    },
+    "affirmations": {
+        "correct": "Tamang-tama ang sagot mo.",
+        "good_effort": "Magaling ang iyong pagsisikap.",
+        "keep_going": "Magpatuloy ka lamang.",
+        "proud": "Nakaka-proud ako sa iyo."
+    },
+    "task_introductions": {
+        "begin": "Sisimulan natin.",
+        "continue": "Magpapatuloy tayo.",
+        "complete": "Natapos na natin."
+    }
+}

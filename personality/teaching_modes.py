@@ -2,33 +2,41 @@
 Teaching Modes Module for MOKA AI Personality System
 """
 
+from localization import LocalizationService
+
+
 class TeachingModes:
     """Teaching modes manager for MOKA AI"""
 
-    def __init__(self):
+    def __init__(self, logger=None):
+        self._logger = logger
+        self._log = logger.info if logger else lambda m: None
+        self.localization = LocalizationService()
         self.modes = {
             "beginner": self.beginner_mode,
             "intermediate": self.intermediate_mode,
-            "advanced": self.advanced_mode
+            "advanced": self.advanced_mode,
         }
 
-    def beginner_mode(self, topic):
+    def beginner_mode(self, topic: str) -> str:
         """Beginner teaching mode"""
-        # Implementation for beginner mode
-        return f"Beginner explanation for {topic}"
+        phrase = self.localization.get_phrase("explaining")
+        return f"{phrase}. {topic}"
 
-    def intermediate_mode(self, topic):
+    def intermediate_mode(self, topic: str) -> str:
         """Intermediate teaching mode"""
-        # Implementation for intermediate mode
-        return f"Intermediate explanation for {topic}"
+        phrase = self.localization.get_phrase("explaining")
+        return f"{phrase}. {topic}"
 
-    def advanced_mode(self, topic):
+    def advanced_mode(self, topic: str) -> str:
         """Advanced teaching mode"""
-        # Implementation for advanced mode
-        return f"Advanced explanation for {topic}"
+        phrase = self.localization.get_phrase("explaining")
+        return f"{phrase}. {topic}"
 
-    def get_teaching_response(self, mode, topic):
+    def get_teaching_response(self, mode: str, topic: str) -> str:
         """Get response based on teaching mode"""
-        if mode in self.modes:
-            return self.modes[mode](topic)
+        teaching_fn = self.modes.get(mode)
+        if teaching_fn:
+            self._log(f"Applying {mode} teaching mode for '{topic}'")
+            return teaching_fn(topic)
         return f"Teaching {topic} in {mode} mode"

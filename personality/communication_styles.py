@@ -2,45 +2,52 @@
 Communication Styles Module for MOKA AI Personality System
 """
 
+from localization import LocalizationService
+
+
 class CommunicationStyles:
     """Communication styles manager for MOKA AI"""
 
-    def __init__(self):
+    def __init__(self, logger=None):
+        self._logger = logger
+        self._log = logger.info if logger else lambda m: None
+        self.localization = LocalizationService()
         self.styles = {
             "formal": self.formal_style,
             "informal": self.informal_style,
             "teaching": self.teaching_style,
             "encouraging": self.encouraging_style,
-            "instructive": self.instructive_style
+            "instructive": self.instructive_style,
         }
 
-    def formal_style(self, content):
+    def formal_style(self, content: str) -> str:
         """Formal communication style"""
-        # Implementation for formal style
-        return f"Formal response: {content}"
+        greeting = self.localization.get_phrase("greeting")
+        return f"{greeting}. {content}"
 
-    def informal_style(self, content):
+    def informal_style(self, content: str) -> str:
         """Informal communication style"""
-        # Implementation for informal style
-        return f"Kamusta! {content}"
+        greeting = self.localization.get_phrase("greeting_informal")
+        return f"{greeting} {content}"
 
-    def teaching_style(self, content):
+    def teaching_style(self, content: str) -> str:
         """Teaching communication style"""
-        # Implementation for teaching style
-        return f"Learning mode: {content}"
+        intro = self.localization.get_phrase("explaining")
+        return f"{intro}. {content}"
 
-    def encouraging_style(self, content):
+    def encouraging_style(self, content: str) -> str:
         """Encouraging communication style"""
-        # Implementation for encouraging style
-        return f"Keep it up! {content}"
+        affirmation = self.localization.get_phrase("affirmation")
+        return f"{affirmation} {content}"
 
-    def instructive_style(self, content):
+    def instructive_style(self, content: str) -> str:
         """Instructive communication style"""
-        # Implementation for instructive style
-        return f"Follow these instructions: {content}"
+        return f"{content}"
 
-    def get_style_response(self, style_type, content):
+    def get_style_response(self, style_type: str, content: str) -> str:
         """Get response based on communication style"""
-        if style_type in self.styles:
-            return self.styles[style_type](content)
+        style_fn = self.styles.get(style_type)
+        if style_fn:
+            self._log(f"Applying style '{style_type}'")
+            return style_fn(content)
         return content
