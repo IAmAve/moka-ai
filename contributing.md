@@ -76,12 +76,97 @@ All code contributions must include:
 ### Review Timeline
 Code reviews should be completed within 48 hours of submission.
 
+## Commit Guidelines
+
+### Commit Message Format
+
+MOKA AI follows the Conventional Commits specification:
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+**Types:**
+- `feat` — New feature
+- `fix` — Bug fix
+- `docs` — Documentation changes
+- `style` — Formatting, no code change
+- `refactor` — Code restructuring
+- `test` — Adding/updating tests
+- `chore` — Maintenance tasks
+- `perf` — Performance improvements
+- `ci` — CI/CD changes
+- `revert` — Reverting a previous commit
+
+**Scopes:**
+- `core` — Core runtime modules
+- `safety` — Safety/permission system
+- `memory` — Memory modules
+- `personality` — Personality system
+- `localization` — Localization/Tagalog
+- `config` — Configuration changes
+- `tests` — Test additions/fixes
+
+**Examples:**
+```bash
+# Good commits
+git commit -m "feat(localization): add emotional support phrases"
+git commit -m "fix(safety): correct approval queue timeout handling"
+git commit -m "docs(core): clarify ModuleRegistry factory pattern"
+git commit -m "test(memory): add integration tests for BehaviorMemory"
+
+# Bad commits (avoid)
+git commit -m "fixed stuff"
+git commit -m "WIP"
+git commit -m "update"
+```
+
+### Commit Best Practices
+
+1. **One logical change per commit** — Don't mix unrelated changes
+2. **Write meaningful descriptions** — Describe *what* and *why*, not just *what*
+3. **Reference issues** — Include issue numbers in footer: `Closes #123`
+4. **Keep commits atomic** — Each commit should be self-contained and testable
+5. **Test before commit** — Run `scripts/test.ps1` to verify before committing
+
+### Commit Workflow
+
+```powershell
+# 1. Create a feature branch
+git checkout -b feature/my-feature
+
+# 2. Make changes and commit
+git add .
+git commit -m "feat(scope): description"
+
+# 3. Run tests before pushing
+.\scripts\test.ps1
+
+# 4. Push and create PR
+git push origin feature/my-feature
+```
+
+### Pre-commit Checklist
+
+Before every commit, verify:
+- [ ] Code follows PEP 8 style guidelines
+- [ ] All tests pass (`python -m pytest tests/ -v`)
+- [ ] New modules include docstrings
+- [ ] Logger integration added to new modules
+- [ ] No placeholder or prototype code included
+- [ ] Commit message follows Conventional Commits format
+- [ ] Documentation updated if needed
+
 ## Pull Request Process
 
 ### PR Requirements
 1. Clear description of changes
 2. Related issue references
-3. Test results
+3. Test results (run `scripts/test.ps1`)
 4. Documentation updates
 5. Code review checklist completion
 
@@ -138,11 +223,11 @@ Security vulnerabilities should be:
 ## Testing
 
 ### Test Requirements
-- 95% code coverage minimum
-- Unit tests for all functions
-- Integration tests for services
-- Performance benchmarks
-- Security testing
+- All new modules require unit tests
+- Safety-critical modules require 90%+ coverage
+- Integration tests for service interactions
+- Performance benchmarks for core components (optional)
+- Security testing for permission-related code
 
 ## Release Process
 

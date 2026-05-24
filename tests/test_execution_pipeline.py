@@ -62,8 +62,9 @@ class TestExecutionPipeline(unittest.TestCase):
         result = self.pipeline.execute("modify", file_path, {})
         self.assertTrue(result.success)
 
-        # Verify rollback restored original
-        self.pipeline.rollback_manager.rollback(f"modify_{file_path}")
+        # Verify rollback restored original (use same action_id format as _execute_action)
+        target_basename = os.path.basename(file_path).replace(".", "_")
+        self.pipeline.rollback_manager.rollback(f"modify_{target_basename}")
         with open(file_path, 'r') as f:
             self.assertEqual(f.read(), "original\n")
 

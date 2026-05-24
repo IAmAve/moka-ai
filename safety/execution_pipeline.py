@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Callable
+import os
 from .permission_levels import PermissionManager, PermissionLevel
 from .intent_detector import IntentDetector
 from .risk_scanner import RiskScanner
 from .approval_queue import ApprovalQueue
 from .rollback_manager import RollbackManager
 from .emergency_stop import EmergencyStop
+from core.event_bus import EventBus
 
 @dataclass
 class ExecutionResult:
@@ -16,7 +18,7 @@ class ExecutionResult:
     action_id: Optional[str] = None
 
 class ExecutionPipeline:
-    def __init__(self, base_path: str = ".safety_snapshots"):
+    def __init__(self, base_path: str = ".safety_snapshots", event_bus: EventBus = None):
         self.permission_manager = PermissionManager()
         self.intent_detector = IntentDetector()
         self.risk_scanner = RiskScanner(self.permission_manager)
@@ -26,6 +28,7 @@ class ExecutionPipeline:
         self.rollback_manager = RollbackManager(base_path)
         self.emergency_stop = EmergencyStop()
         self._execution_handlers: Dict[str, Callable] = {}
+        self.event_bus = event_bus or EventBus()
 
     def execute(self, action: str, target: str, params: Dict[str, Any]) -> ExecutionResult:
         if self.emergency_stop.is_stopped():
@@ -35,9 +38,20 @@ class ExecutionPipeline:
         assessment = self.risk_scanner.assess(intent)
 
         if assessment.blocked:
+            self.event_bus.publish('safety.action_blocked', {
+                'action': action,
+                'target': target,
+                'risk_factors': assessment.risk_factors
+            })
             return ExecutionResult(success=False, blocked=True, error=f"Blocked: {', '.join(assessment.risk_factors)}")
 
         if self.approval_queue.requires_approval(assessment.required_level):
+            self.event_bus.publish('safety.approval_required', {
+                'action_id': f"{action}_{target}",
+                'action': action,
+                'target': target,
+                'level': assessment.required_level.value
+            })
             self.approval_queue.request_approval(
                 f"{action}_{target}",
                 f"{action} on {target}",
@@ -56,7 +70,8 @@ class ExecutionPipeline:
 
     def _execute_action(self, action: str, target: str, params: Dict[str, Any]) -> ExecutionResult:
         # Create snapshot before execution
-        action_id = f"{action}_{target}"
+        target_basename = os.path.basename(target).replace(".", "_")
+        action_id = f"{action}_{target_basename}"
         self.rollback_manager.create_snapshot(action_id, target)
 
         handler = self._execution_handlers.get(action)
