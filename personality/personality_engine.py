@@ -42,7 +42,7 @@ class PersonalityProfile:
     teaching_approach: str = "structured"
 
     def __post_init__(self):
-        if self.traits is None:
+        if not self.traits:
             self.traits = [
                 PersonalityTraits.DISCIPLINED,
                 PersonalityTraits.TEACHER,
