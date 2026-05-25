@@ -10,6 +10,7 @@ from core.health_monitor import HealthMonitor
 from core.version_manager import VersionManager
 from core.environment_manager import EnvironmentManager
 from core.telemetry import Telemetry
+from core_runtime.desktop_runtime_manager import DesktopRuntimeManager
 
 class MokaAI:
     def __init__(self):
@@ -19,6 +20,7 @@ class MokaAI:
         self.service_manager = ServiceManager()
         self.dIContainer = DIContainer()
         self.plugin_manager = None
+        self.desktop_runtime = None
         self.workers = {}
         self.initialized = False
         # New modules wired at construction time
@@ -44,21 +46,33 @@ class MokaAI:
         # 4. Setup plugin system
         self._init_plugins()
 
-        # 5. Register core services
+        # 5. Desktop runtime scan
+        self._init_desktop_runtime()
+
+        # 6. Register core services
         self._register_core_services()
 
-        # 6. Startup validation
+        # 7. Startup validation
         if not self._validate_startup():
             raise RuntimeError("Startup validation failed")
 
-        # 7. Start all services
+        # 8. Start all services
         self._start_services()
 
-        # 8. Start health monitoring
+        # 9. Start health monitoring
         self.health_monitor.start()
 
         self.logger.info("MOKA AI initialized successfully")
         self.initialized = True
+
+    def _init_desktop_runtime(self):
+        self.desktop_runtime = DesktopRuntimeManager(logger=self.logger)
+        result = self.desktop_runtime.run()
+        self.logger.info(
+            f"Desktop scan: {result['software_detected']} apps, "
+            f"{result['runtime_count']} processes, "
+            f"{result['profiles_generated']} profiles"
+        )
 
     def _register_core_services(self):
         self.service_manager.register_service("health_monitor", self.health_monitor)
@@ -79,6 +93,7 @@ class MokaAI:
             ("health_monitor", lambda: self.health_monitor),
             ("version_manager", lambda: self.version_manager),
             ("env_manager", lambda: self.env_manager),
+            ("desktop_runtime", lambda: self.desktop_runtime),
         ]
         for name, check_fn in checks:
             try:
