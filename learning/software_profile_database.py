@@ -22,7 +22,9 @@ class SoftwareProfile:
 class SoftwareProfileDatabase:
     """Database for tracking software profiles and usage patterns"""
 
-    def __init__(self, db_path: str = "software_profiles.json"):
+    def __init__(self, db_path: str = "software_profiles.json", logger=None):
+        self._logger = logger
+        self._log = logger.info if logger else lambda m: None
         self.db_path = db_path
         self.profiles: Dict[str, SoftwareProfile] = {}
         self.load_database()
@@ -35,7 +37,7 @@ class SoftwareProfileDatabase:
                     data = json.load(f)
                     self.profiles = data
         except Exception as e:
-            print(f"Error loading software profile database: {e}")
+            self._log(f"Error loading software profile database: {e}")
             self.profiles = {}
 
     def save_database(self):
@@ -44,7 +46,7 @@ class SoftwareProfileDatabase:
             with open(self.db_path, 'w') as f:
                 json.dump(self.profiles, f, default=str)
         except Exception as e:
-            print(f"Error saving software profile database: {e}")
+            self._log(f"Error saving software profile database: {e}")
 
     def add_profile(self, profile: SoftwareProfile) -> bool:
         """Add a new software profile to the database"""
@@ -53,7 +55,7 @@ class SoftwareProfileDatabase:
             self.save_database()
             return True
         except Exception as e:
-            print(f"Error adding profile: {e}")
+            self._log(f"Error adding profile: {e}")
             return False
 
     def get_profile(self, profile_id: str) -> Optional[SoftwareProfile]:
@@ -69,7 +71,7 @@ class SoftwareProfileDatabase:
                 return True
             return False
         except Exception as e:
-            print(f"Error updating profile: {e}")
+            self._log(f"Error updating profile: {e}")
             return False
 
     def remove_profile(self, profile_id: str) -> bool:
@@ -81,5 +83,5 @@ class SoftwareProfileDatabase:
                 return True
             return False
         except Exception as e:
-            print(f"Error removing profile: {e}")
+            self._log(f"Error removing profile: {e}")
             return False

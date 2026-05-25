@@ -25,7 +25,9 @@ class BehaviorPattern:
 class BehaviorDatabase:
     """Database for tracking and managing behavior patterns"""
 
-    def __init__(self, db_path: str = "behavior_memory.json"):
+    def __init__(self, db_path: str = "behavior_memory.json", logger=None):
+        self._logger = logger
+        self._log = logger.info if logger else lambda m: None
         self.db_path = db_path
         self.behaviors: Dict[str, BehaviorPattern] = {}
         self.load_database()
@@ -49,7 +51,7 @@ class BehaviorDatabase:
                             is_active=behavior_data.get('is_active', True)
                         )
         except Exception as e:
-            print(f"Error loading behavior database: {e}")
+            self._log(f"Error loading behavior database: {e}")
             self.behaviors = {}
 
     def save_database(self):
@@ -58,7 +60,7 @@ class BehaviorDatabase:
             with open(self.db_path, 'w') as f:
                 json.dump(self.behaviors, f, default=str)
         except Exception as e:
-            print(f"Error saving behavior database: {e}")
+            self._log(f"Error saving behavior database: {e}")
 
     def add_behavior_pattern(self, pattern: BehaviorPattern) -> bool:
         """Add a new behavior pattern to the database"""
@@ -67,7 +69,7 @@ class BehaviorDatabase:
             self.save_database()
             return True
         except Exception as e:
-            print(f"Error adding behavior pattern: {e}")
+            self._log(f"Error adding behavior pattern: {e}")
             return False
 
     def get_behavior_pattern(self, pattern_id: str) -> Optional[BehaviorPattern]:

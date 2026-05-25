@@ -24,7 +24,9 @@ class Skill:
 class SkillDatabase:
     """Database for managing learned skills"""
 
-    def __init__(self, db_path: str = "skill_database.json"):
+    def __init__(self, db_path: str = "skill_database.json", logger=None):
+        self._logger = logger
+        self._log = logger.info if logger else lambda m: None
         self.db_path = db_path
         self.skills: Dict[str, Skill] = {}
         self.load_database()
@@ -50,7 +52,7 @@ class SkillDatabase:
                         last_used=datetime.fromisoformat(skill_data['last_used']) if skill_data.get('last_used') else None
                     )
         except Exception as e:
-            print(f"Error loading skill database: {e}")
+            self._log(f"Error loading skill database: {e}")
             self.skills = {}
 
     def save_database(self):
@@ -59,7 +61,7 @@ class SkillDatabase:
             with open(self.db_path, 'w') as f:
                 json.dump(self.skills, f, default=str)
         except Exception as e:
-            print(f"Error saving skill database: {e}")
+            self._log(f"Error saving skill database: {e}")
 
     def add_skill(self, skill: Skill) -> bool:
         """Add a new skill to the database"""
@@ -68,7 +70,7 @@ class SkillDatabase:
             self.save_database()
             return True
         except Exception as e:
-            print(f"Error adding skill: {e}")
+            self._log(f"Error adding skill: {e}")
             return False
 
     def get_skill(self, skill_id: str) -> Optional[Skill]:
@@ -82,7 +84,7 @@ class SkillDatabase:
             self.save_database()
             return True
         except Exception as e:
-            print(f"Error updating skill: {e}")
+            self._log(f"Error updating skill: {e}")
             return False
 
     def remove_skill(self, skill_id: str) -> bool:
@@ -94,7 +96,7 @@ class SkillDatabase:
                 return True
             return False
         except Exception as e:
-            print(f"Error removing skill: {e}")
+            self._log(f"Error removing skill: {e}")
             return False
 
     def get_all_skills(self) -> Dict[str, Skill]:

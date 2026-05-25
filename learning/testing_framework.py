@@ -21,7 +21,9 @@ class TestResult:
 class BehaviorTestingFramework:
     """Testing framework for learned behaviors"""
 
-    def __init__(self):
+    def __init__(self, logger=None):
+        self._logger = logger
+        self._log = logger.info if logger else lambda m: None
         self.test_results: List[TestResult] = []
         self.behavior_tests: Dict[str, List[Callable]] = {}
 
@@ -112,6 +114,6 @@ class BehaviorTestingFramework:
                     test_results['tests_failed'] += 1
             except Exception as e:
                 test_results['tests_failed'] += 1
-                print(f"Test case failed: {e}")
+                self._log(f"Test case failed: {e}")
 
         return test_results
