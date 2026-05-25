@@ -10,8 +10,10 @@ class RiskAssessment:
     blocked: bool
 
 class RiskScanner:
-    def __init__(self, permission_manager: PermissionManager = None):
+    def __init__(self, permission_manager: PermissionManager = None, logger=None):
         self.permission_manager = permission_manager or PermissionManager()
+        self._logger = logger
+        self._log = logger.info if logger else lambda m: None
 
     def assess(self, intent: Intent) -> RiskAssessment:
         risk_factors = []
@@ -25,6 +27,8 @@ class RiskScanner:
         required_level = intent.suggested_level
         blocked = len(risk_factors) > 0
 
+        if blocked:
+            self._log(f"Risk assessment blocked: {risk_factors} for '{intent.action} {intent.target}'")
         return RiskAssessment(
             required_level=required_level,
             risk_factors=risk_factors,

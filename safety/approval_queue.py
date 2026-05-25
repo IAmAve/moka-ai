@@ -21,8 +21,10 @@ class PendingApproval:
     status: ApprovalStatus = ApprovalStatus.PENDING
 
 class ApprovalQueue:
-    def __init__(self, timeout_seconds: int = 60):
+    def __init__(self, timeout_seconds: int = 60, logger=None):
         self.timeout_seconds = timeout_seconds
+        self._logger = logger
+        self._log = logger.info if logger else lambda m: None
         self._pending: Dict[str, PendingApproval] = {}
 
     def requires_approval(self, level: PermissionLevel) -> bool:
@@ -45,12 +47,14 @@ class ApprovalQueue:
     def approve(self, action_id: str) -> bool:
         if action_id in self._pending:
             self._pending[action_id].status = ApprovalStatus.APPROVED
+            self._log(f"Approval granted for action '{action_id}'")
             return True
         return False
 
     def deny(self, action_id: str) -> bool:
         if action_id in self._pending:
             self._pending[action_id].status = ApprovalStatus.DENIED
+            self._log(f"Approval denied for action '{action_id}'")
             return True
         return False
 

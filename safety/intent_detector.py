@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Callable
 from .permission_levels import PermissionLevel
+
 
 @dataclass
 class Intent:
@@ -9,6 +10,7 @@ class Intent:
     params: dict
     suggested_level: PermissionLevel
     original_text: str
+
 
 class IntentDetector:
     ACTION_KEYWORDS = {
@@ -21,11 +23,16 @@ class IntentDetector:
         "plugin": ["plugin", "load", "unload", "enable", "disable"],
     }
 
+    def __init__(self, logger: Callable = None):
+        self._logger = logger
+        self._log = logger.info if logger else lambda m: None
+
     def detect(self, text: str) -> Intent:
         text_lower = text.lower()
         action = self._extract_action(text_lower)
         target = self._extract_target(text, action)
         suggested_level = self._get_level_for_action(action)
+        self._log(f"Detected intent: action={action} level={suggested_level.value}")
         return Intent(
             action=action,
             target=target,

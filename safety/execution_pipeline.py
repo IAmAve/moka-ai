@@ -18,16 +18,19 @@ class ExecutionResult:
     action_id: Optional[str] = None
 
 class ExecutionPipeline:
-    def __init__(self, base_path: str = ".safety_snapshots", event_bus: EventBus = None):
+    def __init__(self, base_path: str = ".safety_snapshots", event_bus: EventBus = None, logger=None):
         self.permission_manager = PermissionManager()
-        self.intent_detector = IntentDetector()
-        self.risk_scanner = RiskScanner(self.permission_manager)
+        self.intent_detector = IntentDetector(logger=logger)
+        self.risk_scanner = RiskScanner(self.permission_manager, logger=logger)
         self.approval_queue = ApprovalQueue(
-            timeout_seconds=self.permission_manager.get_approval_timeout()
+            timeout_seconds=self.permission_manager.get_approval_timeout(),
+            logger=logger,
         )
-        self.rollback_manager = RollbackManager(base_path)
-        self.emergency_stop = EmergencyStop()
+        self.rollback_manager = RollbackManager(base_path, logger=logger)
+        self.emergency_stop = EmergencyStop(logger=logger)
         self._execution_handlers: Dict[str, Callable] = {}
+        self._logger = logger
+        self._log = logger.info if logger else lambda m: None
         self.event_bus = event_bus or EventBus()
 
     def execute(self, action: str, target: str, params: Dict[str, Any]) -> ExecutionResult:

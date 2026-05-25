@@ -12,8 +12,10 @@ class Snapshot:
     created_at: datetime
 
 class RollbackManager:
-    def __init__(self, base_path: str = ".safety_snapshots"):
+    def __init__(self, base_path: str = ".safety_snapshots", logger=None):
         self.base_path = base_path
+        self._logger = logger
+        self._log = logger.info if logger else lambda m: None
         os.makedirs(base_path, exist_ok=True)
         self._snapshots: Dict[str, List[Snapshot]] = {}
 
@@ -43,6 +45,7 @@ class RollbackManager:
             if os.path.exists(snapshot.backup_path):
                 shutil.copy2(snapshot.backup_path, snapshot.file_path)
         self._cleanup(action_id)
+        self._log(f"Rolled back action '{action_id}' — {len(snapshots)} file(s) restored")
         return True
 
     def _cleanup(self, action_id: str):
