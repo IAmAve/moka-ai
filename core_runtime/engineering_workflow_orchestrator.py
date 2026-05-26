@@ -204,13 +204,13 @@ class EngineeringWorkflowOrchestrator:
 
             if not self.install(spec, sandbox_id):
                 if not self._rollback(sandbox_id):
-                self._log(f"Rollback may have failed for {sandbox_id}")
+                    self._log(f"Rollback may have failed for {sandbox_id}")
                 return PipelineResult(status="failed", stage=PipelineStage.INSTALL,
                                       error="install failed", sandbox_id=sandbox_id)
 
             if not self.code(spec, sandbox_id):
                 if not self._rollback(sandbox_id):
-                self._log(f"Rollback may have failed for {sandbox_id}")
+                    self._log(f"Rollback may have failed for {sandbox_id}")
                 return PipelineResult(status="failed", stage=PipelineStage.CODE,
                                       error="coding failed", sandbox_id=sandbox_id)
 
