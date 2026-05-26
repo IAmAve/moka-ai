@@ -28,7 +28,11 @@ class MokaAI:
             service_manager=self.service_manager,
             logger=self.logger,
         )
-        self.image_runtime = None
+        self.image_runtime = ImageRuntimeManager(
+            cache=self.desktop_runtime.get_cache() if self.desktop_runtime else None,
+            event_bus=self.event_bus,
+            logger=self.logger,
+        )
         self.workers = {}
         self.initialized = False
         # New modules wired at construction time
@@ -86,11 +90,6 @@ class MokaAI:
         self.service_manager.register_service("telemetry", self.telemetry)
         self.service_manager.register_service("version_manager", self.version_manager)
         self.service_manager.register_service("engineering_workflow_orchestrator", self.engineering_workflow)
-        self.image_runtime = ImageRuntimeManager(
-            cache=self.desktop_runtime.get_cache() if self.desktop_runtime else None,
-            event_bus=self.event_bus,
-            logger=self.logger,
-        )
         self.service_manager.register_service("image_runtime_manager", self.image_runtime)
 
     def _init_plugins(self):
