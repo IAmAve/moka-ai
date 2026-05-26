@@ -12,6 +12,7 @@ from core.environment_manager import EnvironmentManager
 from core.telemetry import Telemetry
 from core_runtime.desktop_runtime_manager import DesktopRuntimeManager
 from core_runtime.engineering_workflow_orchestrator import EngineeringWorkflowOrchestrator
+from core_runtime.image_runtime_manager import ImageRuntimeManager
 
 class MokaAI:
     def __init__(self):
@@ -27,6 +28,7 @@ class MokaAI:
             service_manager=self.service_manager,
             logger=self.logger,
         )
+        self.image_runtime = None
         self.workers = {}
         self.initialized = False
         # New modules wired at construction time
@@ -84,6 +86,12 @@ class MokaAI:
         self.service_manager.register_service("telemetry", self.telemetry)
         self.service_manager.register_service("version_manager", self.version_manager)
         self.service_manager.register_service("engineering_workflow_orchestrator", self.engineering_workflow)
+        self.image_runtime = ImageRuntimeManager(
+            cache=self.desktop_runtime.get_cache() if self.desktop_runtime else None,
+            event_bus=self.event_bus,
+            logger=self.logger,
+        )
+        self.service_manager.register_service("image_runtime_manager", self.image_runtime)
 
     def _init_plugins(self):
         self.plugin_manager = PluginManager(self.config)
@@ -100,6 +108,7 @@ class MokaAI:
             ("version_manager", lambda: self.version_manager),
             ("env_manager", lambda: self.env_manager),
             ("desktop_runtime", lambda: self.desktop_runtime),
+            ("image_runtime", lambda: self.image_runtime),
             ("engineering_workflow", lambda: self.engineering_workflow),
         ]
         for name, check_fn in checks:
@@ -125,6 +134,8 @@ class MokaAI:
         self.health_monitor.stop()
         if hasattr(self.engineering_workflow, 'stop'):
             self.engineering_workflow.stop()
+        if hasattr(self.image_runtime, 'stop'):
+            self.image_runtime.stop()
         if hasattr(self.telemetry, 'flush'):
             self.telemetry.flush()
         for name in list(self.service_manager.list_services()):
