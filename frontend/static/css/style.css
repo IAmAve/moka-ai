@@ -1,0 +1,267 @@
+/* ═══ CSS Variables ═══ */
+:root {
+    --bg-base: #F2EBE0;
+    --bg-panel: rgba(242, 231, 224, 0.55);
+    --bg-card: rgba(255, 248, 240, 0.7);
+    --text-primary: #2C1A0E;
+    --text-secondary: #6B4C3B;
+    --accent-sand: #D4B896;
+    --accent-amber: #C9956A;
+    --orb-idle: #D9CFC4;
+    --orb-listening: #E8A96B;
+    --orb-thinking: #4A2C17;
+    --orb-speaking: #F0D9A0;
+    --orb-error: #7A4A3A;
+    --border-subtle: rgba(212, 184, 150, 0.35);
+    --glass-bg: rgba(242, 231, 224, 0.55);
+    --glass-border: rgba(212, 184, 150, 0.35);
+    --glass-blur: blur(16px);
+    --card-bg: rgba(255, 248, 240, 0.7);
+    --card-border: rgba(212, 184, 150, 0.25);
+    --rail-width: 56px;
+}
+
+/* ═══ Reset ═══ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg-base); color: var(--text-primary); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; }
+
+/* ═══ App Shell ═══ */
+#app { display: flex; height: 100vh; overflow: hidden; }
+
+/* ═══ Icon Rail ═══ */
+#icon-rail {
+    width: var(--rail-width);
+    background: var(--bg-base);
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.rail-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+}
+.rail-icon:hover { background: var(--bg-card); color: var(--text-primary); }
+.rail-icon.active { background: var(--accent-sand); color: var(--text-primary); }
+.rail-icon svg { width: 22px; height: 22px; }
+
+/* ═══ Panel Area ═══ */
+#panel-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+.panel {
+    position: absolute;
+    inset: 0;
+    padding: 24px;
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+}
+.panel.active { display: flex; }
+
+/* Glassmorphism panels */
+.panel {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.panel-header {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+/* ═══ Cards ═══ */
+.card {
+    background: var(--card-bg);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 12px 16px;
+}
+.card-list { display: flex; flex-direction: column; gap: 8px; }
+
+/* ═══ Voice Panel ═══ */
+#panel-voice {
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+}
+#orb-canvas { cursor: pointer; }
+#transcript-panel {
+    max-height: 160px;
+    width: 100%;
+    max-width: 480px;
+    overflow-y: auto;
+}
+#transcript-log {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.transcript-line { font-size: 13px; color: var(--text-secondary); padding: 4px 0; border-bottom: 1px solid var(--card-border); }
+.transcript-line:last-child { color: var(--text-primary); font-weight: 500; }
+.mic-button {
+    padding: 12px 32px;
+    border-radius: 24px;
+    border: 1.5px solid var(--accent-sand);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.mic-button:hover { background: var(--accent-sand); }
+
+/* ═══ Chat Panel ═══ */
+#panel-chat { gap: 12px; }
+#chat-orb-mini { display: flex; justify-content: center; opacity: 0.6; }
+#conversation-list { display: flex; flex-direction: column; gap: 8px; }
+.conv-item {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.conv-item:hover { background: var(--accent-sand); }
+.conv-meta { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+.conv-preview { font-size: 13px; color: var(--text-primary); }
+
+/* ═══ Memory Panel ═══ */
+.memory-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.memory-col h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 8px; }
+
+/* ═══ Skills Panel ═══ */
+.skill-item {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.skill-name { font-size: 14px; color: var(--text-primary); font-weight: 500; }
+.skill-badge {
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+.badge-draft { background: var(--accent-sand); color: var(--text-primary); }
+.badge-approved { background: #b5d4a0; color: #2a4a1a; }
+.badge-running { background: var(--orb-speaking); color: var(--text-primary); }
+
+/* ═══ Task Queue ═══ */
+#task-list { display: flex; flex-direction: column; gap: 8px; }
+.task-item {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.task-chip {
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+.chip-pending { background: var(--accent-sand); color: var(--text-primary); }
+.chip-running { background: var(--orb-speaking); color: var(--text-primary); }
+.chip-done { background: #b5d4a0; color: #2a4a1a; }
+.chip-failed { background: var(--orb-error); color: white; }
+
+/* ═══ Resource Monitor ═══ */
+.stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 16px;
+}
+.stat-card label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); }
+.bar { height: 6px; background: var(--accent-sand); border-radius: 3px; margin: 8px 0 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--accent-amber); border-radius: 3px; width: 0%; transition: width 0.5s ease; }
+
+/* ═══ Learning Dashboard ═══ */
+#learning-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.metric-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+}
+.metric-value { display: block; font-size: 28px; font-weight: 600; color: var(--text-primary); }
+.metric-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ═══ Activity History ═══ */
+#event-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.filter-btn {
+    padding: 4px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--accent-sand);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+}
+.filter-btn.active { background: var(--accent-amber); color: var(--text-primary); border-color: var(--accent-amber); }
+#event-log { display: flex; flex-direction: column; gap: 6px; }
+.event-item {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+.event-item .event-time { opacity: 0.6; margin-right: 8px; }
+.event-item .event-type { font-weight: 600; margin-right: 8px; }
+
+/* ═══ Settings ═══ */
+.settings-group {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 16px;
+}
+.settings-group h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 12px; }
+.settings-group label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-primary); margin-bottom: 10px; }
+.settings-group input, .settings-group select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--accent-sand);
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+}
+.btn-secondary { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--accent-sand); background: transparent; color: var(--text-primary); cursor: pointer; margin-right: 8px; font-size: 13px; }
+.btn-secondary:hover { background: var(--accent-sand); }
+#app-version { font-size: 12px; color: var(--text-secondary); }
+
+/* ═══ Scrollbar ═══ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--accent-sand); border-radius: 3px; }

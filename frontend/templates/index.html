@@ -3,9 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MokaAI Voice Companion</title>
+    <title>Moka AI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
 <body>
-    <div id="app"></div>
+
+<div id="app">
+
+    <!-- Icon Rail -->
+    <nav id="icon-rail">
+        <button class="rail-icon active" data-panel="voice" title="Voice">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 14a3 3 0 003 3V21h-6v-4a3 3 0 003-3z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="rail-icon" data-panel="chat" title="Chat">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="rail-icon" data-panel="memory" title="Memory">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="rail-icon" data-panel="skills" title="Skills">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="rail-icon" data-panel="tasks" title="Task Queue">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="rail-icon" data-panel="resources" title="Resource Monitor">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="12" width="4" height="8" rx="1" stroke="currentColor" stroke-width="2"/><rect x="10" y="8" width="4" height="12" rx="1" stroke="currentColor" stroke-width="2"/><rect x="17" y="4" width="4" height="16" rx="1" stroke="currentColor" stroke-width="2"/></svg>
+        </button>
+        <button class="rail-icon" data-panel="learning" title="Learning Dashboard">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 16l4-4 4 2 5-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="rail-icon" data-panel="history" title="Activity History">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="rail-icon" data-panel="settings" title="Settings">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+    </nav>
+
+    <!-- Panel Area -->
+    <main id="panel-area">
+
+        <!-- Voice Panel (default) -->
+        <section class="panel active" id="panel-voice">
+            <canvas id="orb-canvas" width="300" height="300"></canvas>
+            <div id="transcript-panel">
+                <div id="transcript-log"></div>
+            </div>
+            <button id="mic-btn" class="mic-button">Tap to speak</button>
+        </section>
+
+        <!-- Chat Panel -->
+        <section class="panel" id="panel-chat">
+            <div class="panel-header">Conversations</div>
+            <div id="chat-orb-mini"><canvas id="chat-orb-canvas" width="60" height="60"></canvas></div>
+            <div id="conversation-list"></div>
+        </section>
+
+        <!-- Memory Panel -->
+        <section class="panel" id="panel-memory">
+            <div class="panel-header">Memory</div>
+            <div class="memory-split">
+                <div class="memory-col"><h3>Short-Term</h3><div id="stm-list" class="card-list"></div></div>
+                <div class="memory-col"><h3>Long-Term</h3><div id="ltm-list" class="card-list"></div></div>
+            </div>
+        </section>
+
+        <!-- Skills Panel -->
+        <section class="panel" id="panel-skills">
+            <div class="panel-header">Skills</div>
+            <div id="skill-list"></div>
+        </section>
+
+        <!-- Task Queue Panel -->
+        <section class="panel" id="panel-tasks">
+            <div class="panel-header">Task Queue</div>
+            <div id="task-list"></div>
+        </section>
+
+        <!-- Resource Monitor Panel -->
+        <section class="panel" id="panel-resources">
+            <div class="panel-header">Resource Monitor</div>
+            <div id="resource-stats">
+                <div class="stat-card"><label>GPU</label><div id="gpu-bar" class="bar"><div class="bar-fill"></div></div><span id="gpu-pct">—</span></div>
+                <div class="stat-card"><label>RAM</label><div id="ram-bar" class="bar"><div class="bar-fill"></div></div><span id="ram-pct">—</span></div>
+            </div>
+            <div id="active-jobs"></div>
+        </section>
+
+        <!-- Learning Dashboard Panel -->
+        <section class="panel" id="panel-learning">
+            <div class="panel-header">Learning Dashboard</div>
+            <div id="learning-metrics">
+                <div class="metric-card"><span class="metric-value" id="metric-behaviors">0</span><span class="metric-label">Behaviors Learned</span></div>
+                <div class="metric-card"><span class="metric-value" id="metric-skills">0</span><span class="metric-label">Skills Acquired</span></div>
+                <div class="metric-card"><span class="metric-value" id="metric-profiles">0</span><span class="metric-label">Profiles Tracked</span></div>
+            </div>
+            <div id="confidence-scores"></div>
+        </section>
+
+        <!-- Activity History Panel -->
+        <section class="panel" id="panel-history">
+            <div class="panel-header">Activity History</div>
+            <div id="event-filters">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="chat">Chat</button>
+                <button class="filter-btn" data-filter="skill">Skill</button>
+                <button class="filter-btn" data-filter="task">Task</button>
+                <button class="filter-btn" data-filter="system">System</button>
+            </div>
+            <div id="event-log"></div>
+        </section>
+
+        <!-- Settings Panel -->
+        <section class="panel" id="panel-settings">
+            <div class="panel-header">Settings</div>
+            <div class="settings-group">
+                <h3>Voice</h3>
+                <label>Wake word<input type="text" id="setting-wake-word" value="Hey Moka"></label>
+                <label>Mic<select id="setting-mic"></select></label>
+                <label>TTS Voice<select id="setting-tts"></select></label>
+            </div>
+            <div class="settings-group">
+                <h3>Data</h3>
+                <button class="btn-secondary" id="btn-clear-history">Clear History</button>
+                <button class="btn-secondary" id="btn-export-memory">Export Memory</button>
+            </div>
+            <div class="settings-group">
+                <h3>About</h3>
+                <p id="app-version">Moka AI — loading...</p>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script src="/static/js/orb.js"></script>
+<script src="/static/js/app.js"></script>
 </body>
 </html>
