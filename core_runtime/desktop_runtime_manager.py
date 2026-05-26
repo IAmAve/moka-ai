@@ -2,6 +2,7 @@
 
 from core_runtime.desktop_runtime_cache import DesktopRuntimeCache
 from core_runtime.software_scanner import SoftwareScanner
+from core_runtime.hardware_scanner import HardwareScanner
 from core_runtime.runtime_scanner import RuntimeScanner
 from core_runtime.tool_scanner import ToolScanner
 from core_runtime.software_profile_engine import SoftwareProfileEngine
@@ -25,6 +26,11 @@ class DesktopRuntimeManager:
         software = self._scanner.scan()
         runtimes = self._runtime_scanner.scan()
         plugins = self._tool_scanner.bulk_map(list(software.keys()))
+
+        self._hardware_scanner = HardwareScanner()
+        hw_profile = self._hardware_scanner.scan()
+        self._cache.set_hardware_profile(hw_profile)
+        self._log(f"Hardware scan: {hw_profile.gpu_model}, {hw_profile.vram_gb}GB VRAM, compute {hw_profile.compute_capability}")
 
         for name, data in software.items():
             self._cache.set_software(name, data)
