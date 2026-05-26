@@ -18,7 +18,7 @@ class PromotionRisk(Enum):
 
 
 class ApprovalGate:
-    AUTO_APPROVE_THRESHOLD = 3  # sum of risk factor weights below this = LOW
+    PROMOTION_TIMEOUT_SECONDS = 300  # 5 minute timeout for human approval
 
     def __init__(self, risk_scanner=None, approval_queue=None, logger=None):
         from safety.risk_scanner import RiskScanner
@@ -26,6 +26,7 @@ class ApprovalGate:
         self._approval_queue = approval_queue or ApprovalQueue()
         self._logger = logger
         self._log = logger.info if logger else lambda m: None
+        self._auto_approved = set()  # set of approval_ids auto-approved by us
 
     def score_promotion(self, changes, sandbox_path="") -> PromotionRisk:
         if not changes:
@@ -52,7 +53,7 @@ class ApprovalGate:
     ):
         approval_id = f"promotion_{sandbox_id}_{from_env}_{to_env}"
         if risk == PromotionRisk.LOW:
-            self._approval_queue.approve(approval_id)
+            self._auto_approved.add(approval_id)
             self._log(f"Auto-approved promotion {approval_id}")
             return {"approval_id": approval_id, "auto_approved": True}
         else:
@@ -68,6 +69,11 @@ class ApprovalGate:
         for from_env in ["temp", "test"]:
             for to_env in ["test", "live"]:
                 aid = f"promotion_{sandbox_id}_{from_env}_{to_env}"
-                if self._approval_queue.is_approved(aid):
+                if aid in self._auto_approved or self._approval_queue.is_approved(aid):
                     return True
         return False
+
+    def is_promotion_approved(self, sandbox_id: str, from_env: str, to_env: str) -> bool:
+        """Check if a specific promotion (from_env -> to_env) is approved."""
+        aid = f"promotion_{sandbox_id}_{from_env}_{to_env}"
+        return aid in self._auto_approved or self._approval_queue.is_approved(aid)

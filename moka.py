@@ -21,8 +21,12 @@ class MokaAI:
         self.service_manager = ServiceManager()
         self.dIContainer = DIContainer()
         self.plugin_manager = None
-        self.desktop_runtime = None
-        self.engineering_workflow = None
+        self.desktop_runtime = DesktopRuntimeManager(logger=self.logger)
+        self.engineering_workflow = EngineeringWorkflowOrchestrator(
+            event_bus=self.event_bus,
+            service_manager=self.service_manager,
+            logger=self.logger,
+        )
         self.workers = {}
         self.initialized = False
         # New modules wired at construction time
@@ -68,7 +72,6 @@ class MokaAI:
         self.initialized = True
 
     def _init_desktop_runtime(self):
-        self.desktop_runtime = DesktopRuntimeManager(logger=self.logger)
         result = self.desktop_runtime.run()
         self.logger.info(
             f"Desktop scan: {result['software_detected']} apps, "
@@ -80,11 +83,6 @@ class MokaAI:
         self.service_manager.register_service("health_monitor", self.health_monitor)
         self.service_manager.register_service("telemetry", self.telemetry)
         self.service_manager.register_service("version_manager", self.version_manager)
-        self.engineering_workflow = EngineeringWorkflowOrchestrator(
-            event_bus=self.event_bus,
-            service_manager=self.service_manager,
-            logger=self.logger,
-        )
         self.service_manager.register_service("engineering_workflow_orchestrator", self.engineering_workflow)
 
     def _init_plugins(self):

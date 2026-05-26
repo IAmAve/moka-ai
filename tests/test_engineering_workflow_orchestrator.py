@@ -47,6 +47,7 @@ class TestEWO(unittest.TestCase):
         ewo.analyze = lambda intent: WorkflowSpec(intent=intent, file_changes=[], dependencies=[], plan={})
         ewo._sandbox_manager.create_sandbox = lambda wid: "fake-id"
         ewo._sandbox_manager.get_sandbox = lambda sid: self._mock_sandbox()
+        ewo.test = lambda spec, sid: True
         result = ewo.run("add user auth")
         self.assertEqual(result.status, "success")
         self.assertEqual(result.sandbox_id, "fake-id")

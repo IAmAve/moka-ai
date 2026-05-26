@@ -10,6 +10,7 @@ RollbackManager, EventBus, ServiceManager.
 
 from dataclasses import dataclass, field
 from enum import Enum
+import time
 from typing import Any, Dict, List, Optional
 
 from core.event_bus import EventBus
@@ -132,11 +133,28 @@ class EngineeringWorkflowOrchestrator:
 
     def test(self, spec: WorkflowSpec, sandbox_id: str) -> bool:
         self._log(f"Running tests in sandbox {sandbox_id}")
-        self._event_bus.publish("workflow.stage.completed", {
-            "stage": PipelineStage.TEST.value,
-            "sandbox_id": sandbox_id,
-        })
-        return True
+        sandbox = self._sandbox_manager.get_sandbox(sandbox_id)
+        if not sandbox:
+            return False
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["python", "-m", "pytest", sandbox.worktree_path, "-v"],
+                capture_output=True, text=True, timeout=300
+            )
+            passed = result.returncode == 0
+            self._log(f"Tests {'passed' if passed else 'failed'} in sandbox {sandbox_id}")
+            if not passed:
+                self._log(f"Test output: {result.stdout[:500]}")
+            return passed
+        except Exception as e:
+            self._log(f"Test run failed for sandbox {sandbox_id}: {e}")
+            return False
+        finally:
+            self._event_bus.publish("workflow.stage.completed", {
+                "stage": PipelineStage.TEST.value,
+                "sandbox_id": sandbox_id,
+            })
 
     def _execute_debug(self, sandbox_id: str, spec: WorkflowSpec) -> Dict[str, Any]:
         def fix_handler():
@@ -157,10 +175,13 @@ class EngineeringWorkflowOrchestrator:
         if result.get("auto_approved"):
             self._log(f"Promotion {sandbox_id} {from_env}→{to_env} auto-approved")
             return True
-        import time
-        while not self._approval_gate.is_approved(sandbox_id):
+        deadline = time.time() + self._approval_gate.PROMOTION_TIMEOUT_SECONDS
+        while time.time() < deadline:
+            if self._approval_gate.is_promotion_approved(sandbox_id, from_env, to_env):
+                return True
             time.sleep(1)
-        return True
+        self._log(f"Approval timeout for {sandbox_id} {from_env}→{to_env}")
+        return False
 
     def _rollback(self, sandbox_id: str) -> bool:
         self._log(f"Rolling back sandbox {sandbox_id}")
@@ -177,7 +198,12 @@ class EngineeringWorkflowOrchestrator:
             self._current_sandbox_id = sandbox_id
             self._current_spec = spec
 
+            container_id = self._sandbox_manager.create_container(sandbox_id)
+            if container_id:
+                self._log(f"Container {container_id} started for sandbox {sandbox_id}")
+
             if not self.install(spec, sandbox_id):
+                self._rollback(sandbox_id)
                 return PipelineResult(status="failed", stage=PipelineStage.INSTALL,
                                       error="install failed", sandbox_id=sandbox_id)
 

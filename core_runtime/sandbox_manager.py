@@ -28,8 +28,12 @@ class SandboxManager:
         worktree_path = os.path.join(self.base_path, f"worktree_{sandbox_id}")
         os.makedirs(worktree_path, exist_ok=True)
         try:
-            subprocess.run(["git", "clone", "-b", self.base_branch, os.getcwd(), worktree_path], capture_output=True)
-        except Exception: pass
+            result = subprocess.run(["git", "clone", "-b", self.base_branch, os.getcwd(), worktree_path],
+                                   capture_output=True, text=True)
+            if result.returncode != 0:
+                self._log(f"Git clone failed for {sandbox_id}: {result.stderr}")
+        except Exception as e:
+            self._log(f"Git clone exception for {sandbox_id}: {e}")
         sandbox = Sandbox(sandbox_id=sandbox_id, workflow_id=workflow_id, environment=SandboxEnvironment.TEMP,
                           worktree_path=worktree_path, container_id=None, status=SandboxStatus.READY)
         self._sandboxes[sandbox_id] = sandbox
