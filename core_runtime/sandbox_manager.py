@@ -32,6 +32,7 @@ class SandboxManager:
                                    capture_output=True, text=True)
             if result.returncode != 0:
                 self._log(f"Git clone failed for {sandbox_id}: {result.stderr}")
+                raise RuntimeError(f"Git clone failed for {sandbox_id}: {result.stderr}")
         except Exception as e:
             self._log(f"Git clone exception for {sandbox_id}: {e}")
         sandbox = Sandbox(sandbox_id=sandbox_id, workflow_id=workflow_id, environment=SandboxEnvironment.TEMP,

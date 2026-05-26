@@ -203,12 +203,14 @@ class EngineeringWorkflowOrchestrator:
                 self._log(f"Container {container_id} started for sandbox {sandbox_id}")
 
             if not self.install(spec, sandbox_id):
-                self._rollback(sandbox_id)
+                if not self._rollback(sandbox_id):
+                self._log(f"Rollback may have failed for {sandbox_id}")
                 return PipelineResult(status="failed", stage=PipelineStage.INSTALL,
                                       error="install failed", sandbox_id=sandbox_id)
 
             if not self.code(spec, sandbox_id):
-                self._rollback(sandbox_id)
+                if not self._rollback(sandbox_id):
+                self._log(f"Rollback may have failed for {sandbox_id}")
                 return PipelineResult(status="failed", stage=PipelineStage.CODE,
                                       error="coding failed", sandbox_id=sandbox_id)
 
@@ -227,13 +229,18 @@ class EngineeringWorkflowOrchestrator:
             })
 
             sandbox = self._sandbox_manager.get_sandbox(sandbox_id)
-            from_env = sandbox.environment.value if sandbox else "temp"
-            to_env = "test"
-            if not self._execute_approval(sandbox_id, from_env, to_env):
-                return PipelineResult(status="failed", stage=PipelineStage.APPROVAL,
-                                      error="approval denied", sandbox_id=sandbox_id)
 
-            self._sandbox_manager.promote_environment(sandbox_id)
+            # Two-gate promotion: temp→test, then test→live
+            for from_env, to_env in [("temp", "test"), ("test", "live")]:
+                if sandbox and sandbox.environment.value != from_env:
+                    # Sandbox already promoted past this stage (e.g. running in test env)
+                    continue
+                if not self._execute_approval(sandbox_id, from_env, to_env):
+                    return PipelineResult(status="failed", stage=PipelineStage.APPROVAL,
+                                          error="approval denied", sandbox_id=sandbox_id)
+                self._sandbox_manager.promote_environment(sandbox_id)
+                self._sandbox_manager.snapshot_sandbox(sandbox_id, f"post-{to_env}-promotion")
+
             self._sandbox_manager.snapshot_sandbox(sandbox_id, "post-launch")
 
             return PipelineResult(
@@ -246,5 +253,6 @@ class EngineeringWorkflowOrchestrator:
         except Exception as e:
             self._log(f"Workflow failed: {e}")
             if self._current_sandbox_id:
-                self._rollback(self._current_sandbox_id)
+                if not self._rollback(self._current_sandbox_id):
+                    self._log(f"Rollback may have failed for {self._current_sandbox_id}")
             return PipelineResult(status="failed", error=str(e))
