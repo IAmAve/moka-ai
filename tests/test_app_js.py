@@ -80,6 +80,13 @@ class TestAppJs(unittest.TestCase):
         for evt_type in ["resource_update", "learning_metrics", "event_log", "skill_update", "task_update", "memory_update", "conversation_list"]:
             self.assertIn(f'"{evt_type}"', self.content, f"{evt_type} event type not wired")
 
+    def test_safe_text_defined(self):
+        self.assertIn("function safeText", self.content)
+
+    def test_safe_text_uses_dom_approach(self):
+        self.assertIn("document.createElement", self.content)
+        self.assertIn("textContent", self.content)
+
 
 if __name__ == "__main__":
     unittest.main()

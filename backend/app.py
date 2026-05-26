@@ -56,7 +56,7 @@ def broadcast_event(event_type, data):
 def _mock_loop():
     """Send mock event data to all connected clients for development."""
     while True:
-        time.sleep(8)
+        eventlet.sleep(8)
         statuses = ["idle", "thinking", "speaking", "idle"]
         broadcast_state({"status": random.choice(statuses)})
         broadcast_event("event_log", {
@@ -118,7 +118,7 @@ def _mock_loop():
 def handle_mic_toggle():
     """Simulate a voice interaction cycle."""
     broadcast_state({"status": "listening"})
-    time.sleep(1.5)
+    eventlet.sleep(1.5)
     broadcast_state({"status": "thinking"})
     user_text = "How do I structure an async pipeline?"
     moka_text = "Use asyncio.Queue with a worker coroutine pattern, connecting producers to consumers via await queue.put() and await queue.get()."
@@ -126,10 +126,10 @@ def handle_mic_toggle():
     _transcript_log.append({"speaker": "moka", "text": moka_text, "ts": time.time()})
     broadcast_state({"transcript": _transcript_log[-4:]})
     broadcast_event("transcript", {"speaker": "user", "text": user_text})
-    time.sleep(0.5)
+    eventlet.sleep(0.5)
     broadcast_state({"status": "speaking"})
     broadcast_event("transcript", {"speaker": "moka", "text": moka_text})
-    time.sleep(2)
+    eventlet.sleep(2)
     broadcast_state({"status": "idle"})
 
 

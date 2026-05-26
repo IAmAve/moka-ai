@@ -6,6 +6,13 @@
     let orbRenderer = null;
     const transcripts = [];  // { speaker, text, ts }
 
+    // ─── Safe text helper (XSS prevention) ──────────────────────────────
+    function safeText(str) {
+        const d = document.createElement("div");
+        d.textContent = str == null ? "" : String(str);
+        return d.innerHTML;
+    }
+
     // ─── Orb Initialization ──────────────────────────────────────────────
     function initOrb() {
         const canvas = document.getElementById("orb-canvas");
@@ -155,7 +162,7 @@
         const item = document.createElement("div");
         item.className = "event-item";
         const ts = data.ts ? new Date(data.ts).toLocaleTimeString() : "";
-        item.innerHTML = `<span class="event-time">${ts}</span><span class="event-type">${eventType}</span>${data.description || ""}`;
+        item.innerHTML = `<span class="event-time">${ts}</span><span class="event-type">${safeText(eventType)}</span>${safeText(data.description || "")}`;
         log.insertBefore(item, log.firstChild);
         while (log.children.length > 100) log.removeChild(log.lastChild);
     }
@@ -169,8 +176,8 @@
         if (!list || !skills) return;
         list.innerHTML = skills.map(s => `
             <div class="skill-item">
-                <span class="skill-name">${s.name}</span>
-                <span class="skill-badge badge-${s.status}">${s.status}</span>
+                <span class="skill-name">${safeText(s.name)}</span>
+                <span class="skill-badge badge-${safeText(s.status)}">${safeText(s.status)}</span>
             </div>
         `).join("");
     }
@@ -180,8 +187,8 @@
         if (!list || !tasks) return;
         list.innerHTML = tasks.map(t => `
             <div class="task-item">
-                <span class="task-chip chip-${t.status}">${t.status}</span>
-                <span>${t.description || t.name || "Task"}</span>
+                <span class="task-chip chip-${safeText(t.status)}">${safeText(t.status)}</span>
+                <span>${safeText(t.description || t.name || "Task")}</span>
             </div>
         `).join("");
     }
@@ -190,13 +197,13 @@
         const stm = document.getElementById("stm-list");
         const ltm = document.getElementById("ltm-list");
         if (stm && data.shortTerm) {
-            stm.innerHTML = data.shortTerm.map(m =>
-                `<div class="card">${m.content || m.text || JSON.stringify(m)}</div>`
+            stn.innerHTML = data.shortTerm.map(m =>
+                `<div class="card">${safeText(m.content || m.text || JSON.stringify(m))}</div>`
             ).join("");
         }
         if (ltm && data.longTerm) {
             ltm.innerHTML = data.longTerm.map(m =>
-                `<div class="card">${m.content || m.text || JSON.stringify(m)}</div>`
+                `<div class="card">${safeText(m.content || m.text || JSON.stringify(m))}</div>`
             ).join("");
         }
     }
@@ -206,8 +213,8 @@
         if (!list || !conversations) return;
         list.innerHTML = conversations.map(c => `
             <div class="conv-item">
-                <div class="conv-meta">${c.date || ""} — ${c.duration || ""}</div>
-                <div class="conv-preview">${c.preview || c.firstLine || ""}</div>
+                <div class="conv-meta">${safeText(c.date || "")} — ${safeText(c.duration || "")}</div>
+                <div class="conv-preview">${safeText(c.preview || c.firstLine || "")}</div>
             </div>
         `).join("");
     }
