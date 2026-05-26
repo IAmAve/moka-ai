@@ -113,8 +113,10 @@ class ImageRuntimeManager:
         request = self._pending_requests.get(request_id)
         if not request:
             return False
-        if request.status != GenerationStatus.PENDING:
+        if request.status == GenerationStatus.CANCELLED:
             return False
+        if request.status != GenerationStatus.PENDING:
+            return True  # already approved (QUEUED by auto-approval, COMPLETED, etc.)
         request.status = GenerationStatus.QUEUED
         return True
 
