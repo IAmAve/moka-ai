@@ -568,10 +568,11 @@ def _on_finish():
     if dpg.get_value("cb_launch"):
         try:
             import subprocess
+            moka_py = Path(state.install_path) / "moka.py"
             subprocess.Popen(
-                [sys.executable, str(Path(state.install_path) / "moka.py")],
+                [str(moka_py)],
                 cwd=state.install_path,
-                detach=True,
+                creationflags=subprocess.DETACHED_PROCESS,
             )
             _log("Launched Moka AI.")
         except Exception as e:
@@ -583,54 +584,58 @@ def _on_finish():
 # ── Theme ─────────────────────────────────────────────────────────────────────
 
 def _apply_theme():
-    with dpg.theme(tag="moka_dark"):
-        # Core colors
-        with dpg.theme_widget():
-            # Window / panels
-            dpg.add_theme_color(dpg.mvThemeCol_WindowBg, BACKGROUND, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_ChildBg, PANEL, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_PopupBg, PANEL, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_Border, BORDER, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_BorderShadow, (0, 0, 0), category=dpg.mvThemeCat_Core)
-            # Text
-            dpg.add_theme_color(dpg.mvThemeCol_Text, TEXT_PRIMARY, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_TextDisabled, TEXT_MUTED, category=dpg.mvThemeCat_Core)
-            # Separator
-            dpg.add_theme_color(dpg.mvThemeCol_Separator, BORDER, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_SeparatorHovered, BORDER, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_SeparatorActive, BORDER, category=dpg.mvThemeCat_Core)
-            # Buttons
-            dpg.add_theme_color(dpg.mvThemeCol_Button, PANEL, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (30, 40, 52), category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, (36, 48, 62), category=dpg.mvThemeCat_Core)
-            # Frame / input
-            dpg.add_theme_color(dpg.mvThemeCol_FrameBg, PANEL, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered, (30, 40, 52), category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_FrameBgActive, (36, 48, 62), category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_InputText, PANEL, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_InputTextBorder, BORDER, category=dpg.mvThemeCat_Core)
-            # Combo
-            dpg.add_theme_color(dpg.mvThemeCol_Combo, PANEL, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_ComboHovered, (30, 40, 52), category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_ComboBorder, BORDER, category=dpg.mvThemeCat_Core)
-            # Checkbox
-            dpg.add_theme_color(dpg.mvThemeCol_CheckMark, ACCENT, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_CheckBox, PANEL, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_CheckBoxHovered, (30, 40, 52), category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_CheckBoxBorder, BORDER, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_CheckBoxBorderHovered, ACCENT, category=dpg.mvThemeCat_Core)
-            # Progress bar
-            dpg.add_theme_color(dpg.mvThemeCol_PlotHistogram, ACCENT, category=dpg.mvThemeCat_Core)
-            # Header
-            dpg.add_theme_color(dpg.mvThemeCol_Header, PANEL, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_HeaderHovered, (30, 40, 52), category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_HeaderActive, (36, 48, 62), category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_HeaderBorder, BORDER, category=dpg.mvThemeCat_Core)
-            # Slider
-            dpg.add_theme_color(dpg.mvThemeCol_SliderGrab, ACCENT, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_SliderGrabHovered, ACCENT_HOVER, category=dpg.mvThemeCat_Core)
-            # Tooltip
-            dpg.add_theme_color(dpg.mvThemeCol_TooltipBg, PANEL, category=dpg.mvThemeCat_Core)
+    """Apply Moka AI dark theme using DPG 2.3.1-compatible add_theme_color API."""
+    t = dpg.add_theme(tag="moka_dark")
+
+    def col(target, value):
+        dpg.add_theme_color(parent=t, category=dpg.mvThemeCat_Core,
+                            target=target, value=value)
+
+    # Window / panels
+    col(dpg.mvThemeCol_WindowBg, BACKGROUND)
+    col(dpg.mvThemeCol_ChildBg, PANEL)
+    col(dpg.mvThemeCol_PopupBg, PANEL)
+    col(dpg.mvThemeCol_Border, BORDER)
+    col(dpg.mvThemeCol_BorderShadow, (0, 0, 0))
+    # Text
+    col(dpg.mvThemeCol_Text, TEXT_PRIMARY)
+    col(dpg.mvThemeCol_TextDisabled, TEXT_MUTED)
+    # Separator
+    col(dpg.mvThemeCol_Separator, BORDER)
+    col(dpg.mvThemeCol_SeparatorHovered, BORDER)
+    col(dpg.mvThemeCol_SeparatorActive, BORDER)
+    # Buttons
+    col(dpg.mvThemeCol_Button, PANEL)
+    col(dpg.mvThemeCol_ButtonHovered, (30, 40, 52))
+    col(dpg.mvThemeCol_ButtonActive, (36, 48, 62))
+    # Frame / input
+    col(dpg.mvThemeCol_FrameBg, PANEL)
+    col(dpg.mvThemeCol_FrameBgHovered, (30, 40, 52))
+    col(dpg.mvThemeCol_FrameBgActive, (36, 48, 62))
+    col(dpg.mvThemeCol_InputText, PANEL)
+    col(dpg.mvThemeCol_InputTextBorder, BORDER)
+    # Combo
+    col(dpg.mvThemeCol_Combo, PANEL)
+    col(dpg.mvThemeCol_ComboHovered, (30, 40, 52))
+    col(dpg.mvThemeCol_ComboBorder, BORDER)
+    # Checkbox
+    col(dpg.mvThemeCol_CheckMark, ACCENT)
+    col(dpg.mvThemeCol_CheckBox, PANEL)
+    col(dpg.mvThemeCol_CheckBoxHovered, (30, 40, 52))
+    col(dpg.mvThemeCol_CheckBoxBorder, BORDER)
+    col(dpg.mvThemeCol_CheckBoxBorderHovered, ACCENT)
+    # Progress bar
+    col(dpg.mvThemeCol_PlotHistogram, ACCENT)
+    # Header
+    col(dpg.mvThemeCol_Header, PANEL)
+    col(dpg.mvThemeCol_HeaderHovered, (30, 40, 52))
+    col(dpg.mvThemeCol_HeaderActive, (36, 48, 62))
+    col(dpg.mvThemeCol_HeaderBorder, BORDER)
+    # Slider
+    col(dpg.mvThemeCol_SliderGrab, ACCENT)
+    col(dpg.mvThemeCol_SliderGrabHovered, ACCENT_HOVER)
+    # Tooltip
+    col(dpg.mvThemeCol_TooltipBg, PANEL)
 
     dpg.bind_theme("moka_dark")
 
@@ -656,6 +661,7 @@ def main():
         log_file.flush()
 
     log("Moka AI Installer starting")
+    log_file.flush()
     try:
         dpg.create_context()
     except Exception as e:
@@ -663,7 +669,11 @@ def main():
         log_file.close()
         return
 
-    _apply_theme()
+    try:
+        _apply_theme()
+    except Exception as e:
+        log_error("_apply_theme", e, e.__traceback__)
+        # Continue without custom theme — DPG will use defaults
 
     try:
         dpg.create_viewport(
