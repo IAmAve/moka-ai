@@ -114,8 +114,28 @@ def _on_welcome_next():
 def build_hardware_page():
     with dpg.group(parent="hardware_page"):
         dpg.add_text("Hardware Scan", tag="hw_title", wrap=400)
+        dpg.add_text("We detected the following hardware:", color=(180, 180, 180))
+        dpg.add_spacer()
+        dpg.add_text("GPU:", color=(200, 200, 200))
         dpg.add_text("Detecting...", tag="hw_gpu")
-        dpg.add_button(label="Re-scan", tag="btn_rescan_hw", callback=_do_hardware_scan)
+        dpg.add_spacer()
+        dpg.add_text("VRAM:", color=(200, 200, 200))
+        dpg.add_text("N/A", tag="hw_vram")
+        dpg.add_spacer()
+        dpg.add_text("System RAM:", color=(200, 200, 200))
+        dpg.add_text("N/A", tag="hw_ram")
+        dpg.add_spacer()
+        dpg.add_text("Platform:", color=(200, 200, 200))
+        dpg.add_text("N/A", tag="hw_platform")
+        dpg.add_spacer()
+        with dpg.group(horizontal=True):
+            dpg.add_button(label="Re-scan", tag="btn_rescan_hw", callback=_do_hardware_scan)
+            dpg.add_button(
+                label="Next →",
+                tag="btn_next_from_hw",
+                callback=lambda: show_page("models_page"),
+                enabled=False,
+            )
 
 
 def _do_hardware_scan():
@@ -124,9 +144,13 @@ def _do_hardware_scan():
         state.hw_profile = scanner.scan()
         cc = state.hw_profile.compute_capability or "N/A"
         dpg.set_value("hw_gpu", f"{state.hw_profile.gpu_model} (compute {cc})")
+        dpg.set_value("hw_vram", f"{state.hw_profile.vram_gb:.1f} GB")
+        dpg.set_value("hw_ram", f"{state.hw_profile.system_ram_gb:.1f} GB")
+        dpg.set_value("hw_platform", state.hw_profile.platform)
         _log(f"Hardware scan: {state.hw_profile.gpu_model}, "
              f"{state.hw_profile.vram_gb}GB VRAM, "
              f"{state.hw_profile.system_ram_gb}GB RAM")
+        dpg.configure_item("btn_next_from_hw", enabled=True)
     except Exception as e:
         _log(f"Hardware scan failed: {e}")
 
