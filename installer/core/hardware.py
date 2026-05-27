@@ -11,16 +11,6 @@ from typing import Optional
 import psutil
 
 
-# Known nvidia-smi locations on Windows (try all of these)
-_NVIDIA_SMI_PATHS = [
-    "nvidia-smi",  # PATH
-    "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe",
-    "C:\\Program Files (x86)\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe",
-    os.path.expandvars("%ProgramFiles%\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"),
-    os.path.expandvars("%ProgramFiles(x86)%\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"),
-]
-
-
 @dataclass
 class HardwareProfile:
     gpu_model: str
@@ -29,91 +19,115 @@ class HardwareProfile:
     available_vram_gb: float
     compute_capability: Optional[str] = None
     platform: str = ""
+    cpu_model: str = ""
+    cpu_cores: int = 0
+    cpu_threads: int = 0
+    all_gpus: list = None   # list of (name, vram_gb)
+
+    def __post_init__(self):
+        if self.all_gpus is None:
+            self.all_gpus = []
 
 
 class HardwareScan:
-    """Scan hardware: GPU (NVIDIA/AMD/Apple Silicon), RAM, VRAM."""
+    """Scan hardware: CPU, GPU (all vendors), RAM, VRAM."""
 
     def scan(self) -> HardwareProfile:
-        gpu_model, vram_gb, compute_capability = self._detect_gpu()
+        cpu_info = self._get_cpu_info()
+        all_gpus = self._get_all_gpus()
+        gpu_model, vram_gb = self._best_gpu(all_gpus)
+        compute_cap = self._get_compute_capability(gpu_model)
+
         mem = psutil.virtual_memory()
         system_ram_gb = round(mem.total / (1024**3), 1)
         available_vram_gb = round(mem.available / (1024**3), 1)
+
         return HardwareProfile(
             gpu_model=gpu_model,
             vram_gb=vram_gb,
             system_ram_gb=system_ram_gb,
             available_vram_gb=available_vram_gb,
-            compute_capability=compute_capability,
+            compute_capability=compute_cap,
             platform=platform.system(),
+            cpu_model=cpu_info["name"],
+            cpu_cores=cpu_info["cores"],
+            cpu_threads=cpu_info["threads"],
+            all_gpus=all_gpus,
         )
 
-    def _detect_gpu(self):
-        """Detect GPU on any platform, try multiple methods in order."""
-        # 1. Try nvidia-smi at various paths
-        for smi_path in _NVIDIA_SMI_PATHS:
-            info = self._nvidia_smi(smi_path)
-            if info:
-                return info["name"], info["vram_gb"], info.get("compute_capability")
+    # ── CPU ──────────────────────────────────────────────────────────────────
 
-        # 2. Try WMI as fallback (Windows-only, works even if nvidia-smi missing)
+    def _get_cpu_info(self) -> dict:
+        """Get human-readable CPU name via WMI (Windows)."""
         if platform.system() == "Windows":
-            info = self._wmi_nvidia()
+            info = self._wmi_cpu()
             if info:
-                return info["name"], info["vram_gb"], info.get("compute_capability")
+                return info
+        # Fallback for Linux/macOS
+        return {
+            "name": platform.processor() or "Unknown CPU",
+            "cores": psutil.cpu_count(logical=False) or 0,
+            "threads": psutil.cpu_count(logical=True) or 0,
+        }
 
-        # 3. Try PyTorch CUDA (works without nvidia-smi)
-        info = self._torch_cuda()
-        if info:
-            return info["name"], info["vram_gb"], None
-
-        # 4. Try AMD ROCm
-        info = self._amd_rocm_smi()
-        if info:
-            return info["name"], info["vram_gb"], info.get("compute_capability")
-
-        # 5. Apple Silicon
-        info = self._apple_metal()
-        if info:
-            return info["name"], info["vram_gb"], None
-
-        cpu = f"{platform.processor() or 'CPU'}"
-        return cpu, 0.0, None
-
-    def _nvidia_smi(self, smi_path: str = "nvidia-smi") -> Optional[dict]:
-        """Detect NVIDIA GPU via nvidia-smi. Returns None if not found."""
+    def _wmi_cpu(self) -> Optional[dict]:
+        """Get CPU brand name via PowerShell + WMI Win32_Processor."""
         try:
-            # Try --query-gpu with compute_cap (not compute_arch)
             r = subprocess.run(
-                [smi_path,
-                 "--query-gpu=name,memory.total,compute_cap",
-                 "--format=csv,noheader,nonoheader"],
+                ["powershell", "-NoProfile", "-Command",
+                 "Get-WmiObject Win32_Processor | "
+                 "Select-Object Name, NumberOfCores, NumberOfLogicalProcessors | "
+                 "ConvertTo-Json -Compress"],
                 capture_output=True, text=True, timeout=15,
             )
             if r.returncode != 0 or not r.stdout.strip():
                 return None
-            parts = [p.strip() for p in r.stdout.strip().split(",")]
-            if not parts:
+            import json
+            data = json.loads(r.stdout)
+            # Handle single-object or list
+            cpu = data[0] if isinstance(data, list) else data
+            name = cpu.get("Name", "").strip()
+            if not name:
                 return None
-            # memory.total is in MiB, convert to GB
-            vr_mib = float(parts[1])
-            vram_gb = round(vr_mib / 1024, 2)
             return {
-                "name": parts[0],
-                "vram_gb": vram_gb,
-                "compute_capability": parts[2].strip() if len(parts) > 2 and parts[2].strip() else None,
+                "name": name,
+                "cores": cpu.get("NumberOfCores", 0) or 0,
+                "threads": cpu.get("NumberOfLogicalProcessors", 0) or 0,
             }
-        except (FileNotFoundError, subprocess.TimeoutExpired, ValueError, IndexError, OSError):
+        except Exception:
             return None
 
-    def _wmi_nvidia(self) -> Optional[dict]:
-        """Windows WMI fallback for NVIDIA GPU detection (no nvidia-smi needed)."""
-        if platform.system() != "Windows":
-            return None
+    # ── GPU (all vendors) ────────────────────────────────────────────────────
+
+    def _get_all_gpus(self) -> list:
+        """Return list of (name, vram_gb) for ALL GPUs detected."""
+        gpus = []
+
+        if platform.system() == "Windows":
+            # WMI Win32_VideoController — works for Intel, AMD, NVIDIA
+            gpus = self._wmi_all_gpus()
+            if gpus:
+                return gpus
+
+        # Try nvidia-smi (NVIDIA only)
+        nvidia = self._nvidia_smi()
+        if nvidia:
+            gpus.append((nvidia["name"], nvidia["vram_gb"]))
+
+        # Try PyTorch CUDA fallback
+        torch = self._torch_cuda()
+        if torch:
+            name = torch["name"]
+            # Avoid duplicate
+            if not any(name.lower() in g[0].lower() for g in gpus):
+                gpus.append((name, torch["vram_gb"]))
+
+        return gpus
+
+    def _wmi_all_gpus(self) -> list:
+        """Get all GPUs via WMI Win32_VideoController (Intel + AMD + NVIDIA)."""
         try:
-            import subprocess as _subprocess
-            # WMI query for NVIDIA GPU — no nvidia-smi dependency
-            r = _subprocess.run(
+            r = subprocess.run(
                 ["powershell", "-NoProfile", "-Command",
                  "Get-WmiObject Win32_VideoController | "
                  "Select-Object Name, AdapterRAM | "
@@ -121,93 +135,88 @@ class HardwareScan:
                 capture_output=True, text=True, timeout=15,
             )
             if r.returncode != 0 or not r.stdout.strip():
-                return None
-            import json as _json
-            data = _json.loads(r.stdout)
-            # Can be a single object or list
-            if isinstance(data, list):
-                # Pick NVIDIA GPU if present
-                for dev in data:
-                    name = dev.get("Name", "")
-                    if "nvidia" in name.lower() or "geforce" in name.lower() or "rtx" in name.lower() or "gtx" in name.lower():
-                        vram_bytes = dev.get("AdapterRAM", 0) or 0
-                        vram_gb = round(vram_bytes / (1024**3), 2) if vram_bytes > 0 else 0.0
-                        return {"name": name, "vram_gb": vram_gb, "compute_capability": None}
-                # No NVIDIA found, return first GPU in list
-                dev = data[0]
-            else:
-                dev = data
-            if not dev:
-                return None
-            name = dev.get("Name", "Unknown GPU")
-            vram_bytes = dev.get("AdapterRAM", 0) or 0
-            vram_gb = round(vram_bytes / (1024**3), 2) if vram_bytes > 0 else 0.0
-            return {"name": name, "vram_gb": vram_gb, "compute_capability": None}
-        except Exception:
-            return None
-
-    def _amd_rocm_smi(self) -> Optional[dict]:
-        """Detect AMD GPU via rocm-smi."""
-        try:
-            r = subprocess.run(
-                ["rocm-smi", "--showid", "--showmeminfo", "vram", "--json"],
-                capture_output=True, text=True, timeout=10,
-            )
-            if r.returncode != 0:
-                return None
+                return []
             import json
             data = json.loads(r.stdout)
-            for gpu_id, info in data.items():
-                vram_str = info.get("VRAM", {}).get("VRAM Used", "0")
-                try:
-                    vram_gb = round(float(vram_str.split()[0]) / 1024, 2) if vram_str else 0.0
-                except (ValueError, IndexError):
-                    vram_gb = 0.0
-                return {"name": f"AMD GPU {gpu_id}", "vram_gb": vram_gb, "compute_capability": None}
-            return None
+            controllers = data if isinstance(data, list) else [data]
+            gpus = []
+            for ctrl in controllers:
+                name = ctrl.get("Name", "").strip()
+                if not name or "output" in name.lower() or "null" in name.lower():
+                    continue
+                vram_bytes = ctrl.get("AdapterRAM") or 0
+                vram_gb = round(vram_bytes / (1024**3), 2) if vram_bytes > 0 else 0.0
+                gpus.append((name, vram_gb))
+            return gpus
         except Exception:
-            return None
+            return []
 
-    def _apple_metal(self) -> Optional[dict]:
-        """Detect Apple Silicon via system_profiler."""
-        if platform.system() != "Darwin":
+    def _best_gpu(self, gpus: list) -> tuple:
+        """Pick the GPU with highest VRAM (dedicated GPU typically has more)."""
+        if not gpus:
+            return "No GPU detected", 0.0
+        # Sort by VRAM descending — dedicated GPU usually > 2GB
+        gpus_sorted = sorted(gpus, key=lambda g: g[1], reverse=True)
+        best = gpus_sorted[0]
+        return best[0], best[1]
+
+    def _get_compute_capability(self, gpu_name: str) -> Optional[str]:
+        """Get CUDA compute capability for NVIDIA GPUs."""
+        if not gpu_name:
             return None
-        try:
-            r = subprocess.run(
-                ["system_profiler", "SPDisplaysDataType", "-json"],
-                capture_output=True, text=True, timeout=15,
-            )
-            if r.returncode != 0:
-                return None
-            import json
-            data = json.loads(r.stdout)
-            gpus = data.get("SPDisplaysDataType", [])
-            if not gpus:
-                return None
-            gpu = gpus[0]
-            vram_str = gpu.get("VRAM", "0")
-            vram_gb = 0.0
+        name_lower = gpu_name.lower()
+        if "nvidia" not in name_lower and "geforce" not in name_lower and \
+           "rtx" not in name_lower and "gtx" not in name_lower:
+            return None
+        # Try nvidia-smi with compute_cap
+        info = self._nvidia_smi()
+        if info:
+            return info.get("compute_capability")
+        return None
+
+    # ── nvidia-smi ────────────────────────────────────────────────────────────
+
+    _NVIDIA_SMI_PATHS = [
+        "nvidia-smi",
+        "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe",
+        os.path.expandvars("%ProgramFiles%\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"),
+    ]
+
+    def _nvidia_smi(self) -> Optional[dict]:
+        """Detect NVIDIA GPU via nvidia-smi at known paths."""
+        for smi in self._NVIDIA_SMI_PATHS:
             try:
-                vram_gb = round(float(vram_str.split()[0]) / 1024, 2)
-            except (ValueError, IndexError):
-                pass
-            return {
-                "name": gpu.get("chip", "Apple Silicon"),
-                "vram_gb": vram_gb,
-                "compute_capability": None,
-            }
-        except Exception:
-            return None
+                r = subprocess.run(
+                    [smi,
+                     "--query-gpu=name,memory.total,compute_cap",
+                     "--format=csv,noheader,nonoheader"],
+                    capture_output=True, text=True, timeout=15,
+                )
+                if r.returncode != 0 or not r.stdout.strip():
+                    continue
+                parts = [p.strip() for p in r.stdout.strip().split(",")]
+                if not parts:
+                    continue
+                vram_gb = round(float(parts[1]) / 1024, 2)
+                return {
+                    "name": parts[0],
+                    "vram_gb": vram_gb,
+                    "compute_capability": parts[2].strip() if len(parts) > 2 and parts[2].strip() else None,
+                }
+            except (FileNotFoundError, subprocess.TimeoutExpired, ValueError, IndexError, OSError):
+                continue
+        return None
+
+    # ── PyTorch fallback ─────────────────────────────────────────────────────
 
     def _torch_cuda(self) -> Optional[dict]:
-        """Try PyTorch CUDA as fallback GPU detection."""
+        """PyTorch CUDA fallback."""
         try:
             import torch
             if torch.cuda.is_available():
                 return {
                     "name": torch.cuda.get_device_name(0),
                     "vram_gb": round(torch.cuda.get_device_properties(0).total_memory / (1024**3), 2),
-                    "compute_capability": None,
                 }
         except ImportError:
             pass

@@ -25,18 +25,20 @@ from installer.core.writer import ConfigWriter
 from installer.core.shortcuts import Shortcuts
 
 
-# ── Color palette (Moka AI dark theme) ───────────────────────────────────────
-BG = (22, 27, 34)           # #161B22 — main background
-SURFACE = (33, 38, 45)       # #21262D — cards / panels
-BORDER = (48, 54, 61)        # #30363D — dividers
-ACCENT = (56, 139, 253)      # #388BFD — Moka blue
-ACCENT_DIM = (56, 139, 253, 80)
-TEXT = (230, 237, 243)       # #E6EDF3 — primary text
-TEXT_MUTED = (139, 148, 158) # #8B949E — secondary text
-SUCCESS = (63, 185, 80)       # #3FB950 — green
-ERROR = (248, 81, 73)        # #F85149 — red
-WARNING = (210, 168, 75)     # #D2A84B — amber
-PURPLE = (163, 113, 247)     # #A371F7 — orb accent
+# ── Moka AI dark color palette ───────────────────────────────────────────────
+# Inspired by Moka AI orb: deep slate bg + electric blue accent + purple glow
+BACKGROUND  = (13, 17, 23)    # #0D1117 — GitHub-dark style main bg
+PANEL       = (22, 27, 34)    # #161B22 — card / panel surfaces
+BORDER      = (38, 44, 54)     # #262E3A — subtle borders
+ACCENT      = (56, 139, 253)  # #388BFD — Moka blue CTA / links
+ACCENT_HOVER= (70, 151, 255)   # lighter blue on hover
+TEXT_PRIMARY = (229, 235, 241) # #E5EBF1
+TEXT_MUTED  = (99, 110, 123)   # #636E7B
+SUCCESS     = (46, 192, 124)   # #3FC07C — green
+WARNING     = (213, 168, 75)  # #D5A84B — amber
+ORB_PURPLE  = (163, 113, 247)  # #A371F7 — the moka orb accent
+INTEL_BLUE  = (0, 117, 200)    # Intel brand blue
+AMD_RED     = (237, 42, 39)    # AMD brand red
 
 
 class InstallerState:
@@ -101,31 +103,34 @@ def show_page(page_tag: str):
         dpg.set_value("page_title", "Installation Complete!")
 
 
-# ── Welcome page ────────────────────────────────────────────────────────────
+# ── Welcome page ──────────────────────────────────────────────────────────────
 
 def build_welcome_page():
     with dpg.group(parent="welcome_page"):
-        # Header with orb accent dot
+        # Header: orb icon + title
         with dpg.group(horizontal=True):
-            dpg.add_text("●", color=PURPLE, tag="orb_dot", wrap=0)
+            dpg.add_text("◉", color=ORB_PURPLE, tag="orb_icon", wrap=0)
             dpg.add_same_line()
-            dpg.add_text("Moka AI Installer", tag="welcome_title", color=TEXT, wrap=400)
-        dpg.add_text(f"Version {INSTALLER_VERSION}", color=TEXT_MUTED)
+            dpg.add_text("Moka AI Installer", tag="welcome_title",
+                          color=TEXT_PRIMARY, bold=True, wrap=400)
+        dpg.add_text(f"v{INSTALLER_VERSION}", color=TEXT_MUTED, tag="welcome_ver")
         dpg.add_separator(color=BORDER)
+        dpg.add_spacing()
 
         dpg.add_text("Set up Moka AI on your machine. "
-                     "Download models, configure settings, and create shortcuts.",
-                     color=TEXT_MUTED, wrap=420)
-
+                     "Download AI models, configure settings, and "
+                     "create shortcuts.",
+                     color=TEXT_MUTED, wrap=440)
         dpg.add_spacing()
-        dpg.add_text("Installation directory:", color=TEXT)
 
-        # Path input + Browse button on same line
+        # Installation path row
+        dpg.add_text("Installation directory", color=TEXT_MUTED, tag="path_label")
+        dpg.add_spacing(count=1)
         with dpg.group(horizontal=True):
             dpg.add_input_text(
                 tag="install_path_input",
                 default_value=_default_install_path(),
-                width=420,
+                width=440,
             )
             dpg.add_same_line()
             dpg.add_button(
@@ -134,24 +139,33 @@ def build_welcome_page():
                 width=90,
             )
 
-        dpg.add_spacing()
-
-        # Directory picker dialog (hidden, triggered by Browse button)
+        # Directory dialog
         with dpg.file_dialog(
             tag="directory_dialog",
             show=False,
             directory_selector=True,
-            min_size=(400, 300),
+            min_size=(480, 360),
             callback=_show_directory_picker,
             default_path=_default_install_path(),
         ):
             dpg.add_file_extension("", color=ACCENT)
             dpg.add_file_extension(".MokaAI", color=TEXT_MUTED)
 
+        dpg.add_spacing()
+
+        # Terms note
+        dpg.add_text(
+            "By clicking Next, you agree to the MIT license and "
+            "acknowledge that AI models will be downloaded.",
+            color=TEXT_MUTED, wrap=420,
+        )
+        dpg.add_spacing()
+
         dpg.add_button(
-            label="Next →",
+            label="Next  →",
             tag="btn_next_from_welcome",
             callback=lambda: _on_welcome_next(),
+            width=120,
         )
 
 
@@ -164,146 +178,219 @@ def _on_welcome_next():
     threading.Thread(target=_do_hardware_scan, daemon=True).start()
 
 
-# ── Hardware page ─────────────────────────────────────────────────────────────
+# ── Hardware page ──────────────────────────────────────────────────────────────
+
+def _gpu_color(name: str):
+    """Return brand-appropriate color for GPU."""
+    n = name.lower()
+    if "intel" in n:
+        return INTEL_BLUE
+    if "amd" in n or "radeon" in n or "rx " in n:
+        return AMD_RED
+    if "nvidia" in n or "geforce" in n or "rtx" in n or "gtx" in n:
+        return ACCENT
+    return TEXT_PRIMARY
+
+
+def _gpu_tag(prefix: str, idx: int) -> str:
+    return f"{prefix}_{idx}"
+
 
 def build_hardware_page():
     with dpg.group(parent="hardware_page"):
-        dpg.add_text("Hardware Scan", color=TEXT, tag="hw_title", wrap=400)
-        dpg.add_text("Detecting your hardware...", color=TEXT_MUTED, tag="hw_status")
+        dpg.add_text("Hardware Scan", color=TEXT_PRIMARY, tag="hw_title",
+                      bold=True, wrap=400)
+        dpg.add_text("Detecting your hardware automatically...",
+                      color=TEXT_MUTED, tag="hw_status", wrap=400)
         dpg.add_separator(color=BORDER)
         dpg.add_spacing()
 
-        # GPU row
+        # ── CPU card ──────────────────────────────────────────────────────────
         with dpg.group(horizontal=True):
-            dpg.add_text("GPU", color=TEXT_MUTED, width=100)
-            dpg.add_text("Detecting...", tag="hw_gpu", color=TEXT)
+            dpg.add_text("[CPU]", color=ACCENT, width=70)
+            dpg.add_text("Detecting...", tag="hw_cpu", color=TEXT_PRIMARY)
+        dpg.add_spacing(count=1)
+
+        # ── GPU card(s) ───────────────────────────────────────────────────────
+        dpg.add_text("[GPU]", color=ACCENT, width=70, tag="gpu_label_anchor")
+        # We create tags for 2 possible GPUs
+        for i in range(2):
+            tag = _gpu_tag("hw_gpu", i)
+            with dpg.group(horizontal=True, show=(i == 0)):
+                dpg.add_text(f"  ▶", color=TEXT_MUTED, tag=_gpu_tag("gpu_arrow", i))
+                dpg.add_text(f"GPU {i+1}:", color=TEXT_MUTED, width=50,
+                             tag=_gpu_tag("gpu_label", i))
+                dpg.add_text("Detecting...", tag=tag, color=TEXT_PRIMARY)
+            dpg.add_spacing(count=1)
+
+        # Primary GPU highlight (shown after scan)
+        dpg.add_text("Primary GPU:", color=TEXT_MUTED, tag="hw_primary_gpu_label",
+                     show=False)
+        dpg.add_text("", tag="hw_primary_gpu", color=ACCENT, show=False)
+        dpg.add_spacing(count=1)
+
+        # ── Memory ───────────────────────────────────────────────────────────
+        with dpg.group(horizontal=True):
+            dpg.add_text("[RAM]", color=ACCENT, width=70)
+            dpg.add_text("Detecting...", tag="hw_ram", color=TEXT_PRIMARY)
+        dpg.add_spacing(count=1)
+
+        # ── OS ───────────────────────────────────────────────────────────────
+        with dpg.group(horizontal=True):
+            dpg.add_text("[OS]", color=ACCENT, width=70)
+            dpg.add_text("Detecting...", tag="hw_os", color=TEXT_PRIMARY)
         dpg.add_spacing()
 
-        # VRAM row
-        with dpg.group(horizontal=True):
-            dpg.add_text("VRAM", color=TEXT_MUTED, width=100)
-            dpg.add_text("—", tag="hw_vram", color=TEXT)
-        dpg.add_spacing()
-
-        # RAM row
-        with dpg.group(horizontal=True):
-            dpg.add_text("System RAM", color=TEXT_MUTED, width=100)
-            dpg.add_text("—", tag="hw_ram", color=TEXT)
-        dpg.add_spacing()
-
-        # Platform row
-        with dpg.group(horizontal=True):
-            dpg.add_text("Platform", color=TEXT_MUTED, width=100)
-            dpg.add_text("—", tag="hw_platform", color=TEXT)
-        dpg.add_spacing()
         dpg.add_separator(color=BORDER)
         dpg.add_spacing()
 
         with dpg.group(horizontal=True):
             dpg.add_button(
-                label="↻ Rescan",
+                label="↻  Rescan",
                 tag="btn_rescan_hw",
-                callback=lambda: threading.Thread(target=_do_hardware_scan, daemon=True).start(),
+                callback=lambda: threading.Thread(
+                    target=_do_hardware_scan, daemon=True
+                ).start(),
+                width=100,
             )
             dpg.add_same_line()
             dpg.add_button(
-                label="Next →",
+                label="Next  →",
                 tag="btn_next_from_hw",
                 callback=lambda: show_page("models_page"),
                 enabled=False,
+                width=100,
             )
 
 
 def _do_hardware_scan():
-    # Run scan on background thread so UI never freezes
-    dpg.set_value("hw_status", "Scanning hardware...")
-    dpg.set_value("hw_gpu", "Detecting...")
-    dpg.set_value("hw_vram", "—")
-    dpg.set_value("hw_ram", "—")
-    dpg.set_value("hw_platform", "—")
+    """Run hardware scan on background thread, update UI safely."""
+    dpg.set_value("hw_status", "Scanning...")
     try:
         scanner = HardwareScan()
         hw = scanner.scan()
         state.hw_profile = hw
-        cc = hw.compute_capability or "N/A"
-        dpg.set_value("hw_gpu", f"{hw.gpu_model}  (compute {cc})")
-        dpg.set_value("hw_vram", f"{hw.vram_gb:.1f} GB")
-        dpg.set_value("hw_ram", f"{hw.system_ram_gb:.1f} GB")
-        dpg.set_value("hw_platform", hw.platform)
-        dpg.set_value("hw_status", "Hardware detected successfully.")
+
+        # CPU
+        cpu_label = hw.cpu_model or "Unknown CPU"
+        if hw.cpu_cores and hw.cpu_threads:
+            cpu_label += f"  ({hw.cpu_cores}C / {hw.cpu_threads}T)"
+        dpg.set_value("hw_cpu", cpu_label)
+
+        # OS
+        os_label = f"{hw.platform} {platform.release()}"
+        try:
+            import subprocess
+            r = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 "(Get-WmiObject Win32_OperatingSystem).Caption"],
+                capture_output=True, text=True, timeout=5,
+            )
+            win_caption = r.stdout.strip()
+            if win_caption:
+                os_label = win_caption
+        except Exception:
+            pass
+        dpg.set_value("hw_os", os_label)
+
+        # RAM
+        dpg.set_value("hw_ram", f"{hw.system_ram_gb:.1f} GB available "
+                            f"({hw.available_vram_gb:.1f} GB free)")
+
+        # GPUs — show all detected
+        all_gpus = hw.all_gpus if hw.all_gpus else [(hw.gpu_model, hw.vram_gb)]
+        for i, (gpu_name, gpu_vram) in enumerate(all_gpus[:2]):
+            tag = _gpu_tag("hw_gpu", i)
+            if dpg.does_item_exist(tag):
+                dpg.configure_item(tag, show=True)
+                arrow_tag = _gpu_tag("gpu_arrow", i)
+                label_tag = _gpu_tag("gpu_label", i)
+                if i == 0:
+                    dpg.configure_item(arrow_tag, show=True)
+                    dpg.configure_item(label_tag, show=True)
+                # Tag primary
+                gpu_label = f"{gpu_name}  ({gpu_vram:.1f} GB)" if gpu_vram > 0 else gpu_name
+                dpg.set_value(tag,
+                    f"{gpu_name}  —  {gpu_vram:.1f} GB VRAM" if gpu_vram > 0 else gpu_name)
+                dpg.configure_item(tag, color=_gpu_color(gpu_name))
+
+        # Primary GPU
+        primary_name = hw.gpu_model
+        primary_vram = hw.vram_gb
+        if primary_vram > 0:
+            dpg.set_value("hw_primary_gpu",
+                          f"{primary_name}  ({primary_vram:.1f} GB VRAM)")
+            dpg.configure_item("hw_primary_gpu", color=_gpu_color(primary_name))
+        else:
+            dpg.set_value("hw_primary_gpu", primary_name)
+        dpg.configure_item("hw_primary_gpu", show=True)
+        dpg.configure_item("hw_primary_gpu_label", show=True)
+
+        # Status
+        dpg.set_value("hw_status",
+                      f"Found {len(all_gpus)} GPU(s). Hardware scan complete.")
         dpg.configure_item("btn_next_from_hw", enabled=True)
-        _log(f"Hardware: {hw.gpu_model}, {hw.vram_gb:.0f}GB VRAM, "
-             f"{hw.system_ram_gb:.0f}GB RAM, {hw.platform}")
+        _log(f"Hardware: {cpu_label} | "
+             f"{' | '.join([g[0] for g in all_gpus])} | "
+             f"{hw.system_ram_gb:.0f}GB RAM")
+
     except Exception as e:
         dpg.set_value("hw_status", f"Scan failed: {e}")
         _log(f"Hardware scan error: {e}")
 
 
-# ── Model selection page ──────────────────────────────────────────────────────
+# ── Model selection page ───────────────────────────────────────────────────────
 
 def build_models_page():
     with dpg.group(parent="models_page"):
         vram = state.hw_profile.vram_gb if state.hw_profile else 0.0
-        dpg.add_text("Select AI Models", color=TEXT, tag="models_title", wrap=400)
+        dpg.add_text("Select AI Models", color=TEXT_PRIMARY, tag="models_title",
+                     bold=True, wrap=400)
         dpg.add_text(
-            f"Recommended models for your {vram:.0f} GB VRAM:",
+            f"Recommended models for your hardware "
+            f"({vram:.0f} GB available VRAM):",
             color=TEXT_MUTED, wrap=400,
         )
         dpg.add_separator(color=BORDER)
         dpg.add_spacing()
 
-        dpg.add_text("Base Model (coding / reasoning)", color=TEXT_MUTED)
-        dpg.add_combo(
-            tag="model_base",
-            items=["auto"],
-            default_value="auto",
-            width=420,
-            callback=_on_model_changed,
-        )
-        dpg.add_spacing()
+        for model_type, label in [
+            ("base", "Base Model  (coding & reasoning)"),
+            ("image", "Image Model  (text → image)"),
+            ("voice", "Voice Model  (TTS & STT)"),
+        ]:
+            dpg.add_text(label, color=TEXT_MUTED)
+            dpg.add_combo(
+                tag=f"model_{model_type}",
+                items=["auto"],
+                default_value="auto",
+                width=440,
+                callback=_on_model_changed,
+            )
+            dpg.add_spacing(count=1)
 
-        dpg.add_text("Image Model", color=TEXT_MUTED)
-        dpg.add_combo(
-            tag="model_image",
-            items=["auto"],
-            default_value="auto",
-            width=420,
-            callback=_on_model_changed,
-        )
-        dpg.add_spacing()
-
-        dpg.add_text("Voice Model", color=TEXT_MUTED)
-        dpg.add_combo(
-            tag="model_voice",
-            items=["auto"],
-            default_value="auto",
-            width=420,
-            callback=_on_model_changed,
-        )
-        dpg.add_spacing()
-
-        with dpg.group(horizontal=True):
-            dpg.add_text("Total download size:", color=TEXT_MUTED)
-            dpg.add_same_line()
-            dpg.add_text("—", tag="model_total_size", color=ACCENT)
-
-        dpg.add_spacing()
         dpg.add_separator(color=BORDER)
         dpg.add_spacing()
 
         with dpg.group(horizontal=True):
-            dpg.add_button(
-                label="← Back",
-                callback=lambda: show_page("hardware_page"),
-            )
+            dpg.add_text("Estimated total size:", color=TEXT_MUTED)
             dpg.add_same_line()
-            dpg.add_button(
-                label="Install →",
-                tag="btn_next_from_models",
-                callback=_on_install_click,
-            )
+            dpg.add_text("—", tag="model_total_size", color=ACCENT, bold=True)
 
-        # Populate combos after widgets exist
+        dpg.add_spacing()
+        dpg.add_button(
+            label="←  Back",
+            callback=lambda: show_page("hardware_page"),
+            width=100,
+        )
+        dpg.add_same_line()
+        dpg.add_button(
+            label="Install  →",
+            tag="btn_next_from_models",
+            callback=_on_install_click,
+            width=140,
+        )
+
         _load_model_options()
 
 
@@ -313,8 +400,8 @@ def _load_model_options():
         vram = state.hw_profile.vram_gb if state.hw_profile else 8.0
         recommended = recon.get_recommended_models(vram)
         all_models = recon.get_all_models()
-
         sizes = {"base": 0.0, "image": 0.0, "voice": 0.0}
+
         for model_type, default_m in recommended.items():
             items = []
             for m in all_models:
@@ -358,18 +445,19 @@ def _on_install_click():
 
 def build_install_page():
     with dpg.group(parent="install_page"):
-        dpg.add_text("Installing Moka AI...", color=TEXT, tag="install_title", wrap=400)
+        dpg.add_text("Installing Moka AI...", color=TEXT_PRIMARY, tag="install_title",
+                     bold=True, wrap=400)
         dpg.add_separator(color=BORDER)
         dpg.add_spacing()
 
         with dpg.group(horizontal=True):
             dpg.add_text("Progress:", color=TEXT_MUTED)
             dpg.add_same_line()
-            dpg.add_text("0%", tag="progress_pct", color=ACCENT)
-        dpg.add_progress_bar(tag="progress_bar", default_value=0.0, width=500, height=16)
-        dpg.add_spacing()
-
-        dpg.add_text("Preparing...", tag="install_status", color=TEXT_MUTED)
+            dpg.add_text("0%", tag="progress_pct", color=ACCENT, bold=True)
+        dpg.add_progress_bar(tag="progress_bar", default_value=0.0,
+                              width=540, height=18)
+        dpg.add_spacing(count=1)
+        dpg.add_text("", tag="install_status", color=SUCCESS)
         dpg.add_spacing()
 
         with dpg.group(horizontal=True):
@@ -378,8 +466,8 @@ def build_install_page():
             tag="log_area",
             multiline=True,
             readonly=True,
-            width=700,
-            height=180,
+            width=680,
+            height=200,
         )
 
 
@@ -404,8 +492,8 @@ def _do_install():
             if state.hw_profile else None,
         )
         writer.register_uninstaller(str(install_path), INSTALLER_VERSION)
-
         _log("Config written and uninstaller registered.")
+
         dpg.set_value("install_status", "Installing packages...")
         dpg.configure_item("progress_bar", default_value=0.25)
         dpg.set_value("progress_pct", "25%")
@@ -414,14 +502,16 @@ def _do_install():
             state.packages,
             progress_callback=lambda pkg, msg: _log(msg),
         )
+
         dpg.set_value("install_status", "All packages installed.")
         dpg.configure_item("progress_bar", default_value=0.85)
         dpg.set_value("progress_pct", "85%")
         _log("Installation complete!")
+
         dpg.configure_item("progress_bar", default_value=1.0)
         dpg.set_value("progress_pct", "100%")
-        dpg.set_value("finish_install_status", "Installation complete!")
-        dpg.set_value("finish_title", "Moka AI Installed!")
+        dpg.set_value("finish_install_status",
+                      "Moka AI is installed and ready to run!")
         show_page("finish_page")
 
     except Exception as e:
@@ -433,14 +523,15 @@ def _do_install():
 
 def build_finish_page():
     with dpg.group(parent="finish_page"):
-        dpg.add_text("Moka AI Installed!", color=SUCCESS,
-                     tag="finish_title", wrap=400)
+        dpg.add_text("✓", color=SUCCESS, tag="finish_icon", wrap=0)
+        dpg.add_same_line()
+        dpg.add_text("Moka AI Installed!", color=SUCCESS, tag="finish_title",
+                     bold=True, wrap=400)
+        dpg.add_text(f"Location: {state.install_path}", color=TEXT_MUTED)
         dpg.add_separator(color=BORDER)
         dpg.add_spacing()
-        dpg.add_text(f"Location: {state.install_path}", color=TEXT_MUTED)
-        dpg.add_spacing()
         dpg.add_text("Installation completed successfully.",
-                     tag="finish_install_status", color=TEXT, wrap=400)
+                     tag="finish_install_status", color=TEXT_PRIMARY, wrap=400)
         dpg.add_spacing()
 
         dpg.add_checkbox(
@@ -448,6 +539,7 @@ def build_finish_page():
             default_value=True,
             tag="cb_desktop_shortcut",
         )
+        dpg.add_spacing(count=1)
         dpg.add_checkbox(
             label="Launch Moka AI now",
             default_value=True,
@@ -456,7 +548,13 @@ def build_finish_page():
         dpg.add_spacing()
         dpg.add_separator(color=BORDER)
         dpg.add_spacing()
-        dpg.add_button(label="Finish", tag="btn_finish", callback=_on_finish)
+
+        dpg.add_button(
+            label="Finish",
+            tag="btn_finish",
+            callback=_on_finish,
+            width=100,
+        )
 
 
 def _on_finish():
@@ -482,48 +580,59 @@ def _on_finish():
     dpg.stop_dearpygui()
 
 
-# ── Dark theme setup ───────────────────────────────────────────────────────────
+# ── Theme ─────────────────────────────────────────────────────────────────────
 
 def _apply_theme():
-    """Apply Moka AI dark theme to the Dear PyGUI context."""
-    with dpg.theme(tag="moka_theme"):
+    with dpg.theme(tag="moka_dark"):
+        # Core colors
         with dpg.theme_widget():
-            # Window background
-            dpg.add_theme_color(dpg.mvThemeCol_WindowBg, BG, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_ChildBg, SURFACE, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_PopupBg, SURFACE, category=dpg.mvThemeCat_Core)
-            # Text
-            dpg.add_theme_color(dpg.mvThemeCol_Text, TEXT, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_TextDisabled, TEXT_MUTED, category=dpg.mvThemeCat_Core)
-            # Buttons
-            dpg.add_theme_color(dpg.mvThemeCol_Button, SURFACE, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (40, 47, 56), category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, (52, 60, 72), category=dpg.mvThemeCat_Core)
+            # Window / panels
+            dpg.add_theme_color(dpg.mvThemeCol_WindowBg, BACKGROUND, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_ChildBg, PANEL, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_PopupBg, PANEL, category=dpg.mvThemeCat_Core)
             dpg.add_theme_color(dpg.mvThemeCol_Border, BORDER, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_BorderShadow, (0, 0, 0, 0), category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_BorderShadow, (0, 0, 0), category=dpg.mvThemeCat_Core)
+            # Text
+            dpg.add_theme_color(dpg.mvThemeCol_Text, TEXT_PRIMARY, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_TextDisabled, TEXT_MUTED, category=dpg.mvThemeCat_Core)
             # Separator
             dpg.add_theme_color(dpg.mvThemeCol_Separator, BORDER, category=dpg.mvThemeCat_Core)
-            # Progress bar
-            dpg.add_theme_color(dpg.mvThemeCol_PlotHistogram, ACCENT, category=dpg.mvThemeCat_Core)
-            # Frame
-            dpg.add_theme_color(dpg.mvThemeCol_FrameBg, SURFACE, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered, (40, 47, 56), category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_FrameBgActive, (48, 55, 65), category=dpg.mvThemeCat_Core)
-            # Input text
-            dpg.add_theme_color(dpg.mvThemeCol_InputText, SURFACE, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_SeparatorHovered, BORDER, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_SeparatorActive, BORDER, category=dpg.mvThemeCat_Core)
+            # Buttons
+            dpg.add_theme_color(dpg.mvThemeCol_Button, PANEL, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (30, 40, 52), category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, (36, 48, 62), category=dpg.mvThemeCat_Core)
+            # Frame / input
+            dpg.add_theme_color(dpg.mvThemeCol_FrameBg, PANEL, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered, (30, 40, 52), category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_FrameBgActive, (36, 48, 62), category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_InputText, PANEL, category=dpg.mvThemeCat_Core)
             dpg.add_theme_color(dpg.mvThemeCol_InputTextBorder, BORDER, category=dpg.mvThemeCat_Core)
             # Combo
-            dpg.add_theme_color(dpg.mvThemeCol_Combo, SURFACE, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_Combo, PANEL, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_ComboHovered, (30, 40, 52), category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_ComboBorder, BORDER, category=dpg.mvThemeCat_Core)
             # Checkbox
             dpg.add_theme_color(dpg.mvThemeCol_CheckMark, ACCENT, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_CheckBox, PANEL, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_CheckBoxHovered, (30, 40, 52), category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_CheckBoxBorder, BORDER, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_CheckBoxBorderHovered, ACCENT, category=dpg.mvThemeCat_Core)
+            # Progress bar
+            dpg.add_theme_color(dpg.mvThemeCol_PlotHistogram, ACCENT, category=dpg.mvThemeCat_Core)
             # Header
-            dpg.add_theme_color(dpg.mvThemeCol_Header, SURFACE, category=dpg.mvThemeCat_Core)
-            dpg.add_theme_color(dpg.mvThemeCol_HeaderHovered, (40, 47, 56), category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_Header, PANEL, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_HeaderHovered, (30, 40, 52), category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_HeaderActive, (36, 48, 62), category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_HeaderBorder, BORDER, category=dpg.mvThemeCat_Core)
             # Slider
             dpg.add_theme_color(dpg.mvThemeCol_SliderGrab, ACCENT, category=dpg.mvThemeCat_Core)
+            dpg.add_theme_color(dpg.mvThemeCol_SliderGrabHovered, ACCENT_HOVER, category=dpg.mvThemeCat_Core)
+            # Tooltip
+            dpg.add_theme_color(dpg.mvThemeCol_TooltipBg, PANEL, category=dpg.mvThemeCat_Core)
 
-        # Apply to viewport
-        dpg.bind_theme("moka_theme")
+    dpg.bind_theme("moka_dark")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -559,9 +668,9 @@ def main():
     try:
         dpg.create_viewport(
             title=f"Moka AI Installer  v{INSTALLER_VERSION}",
-            width=840, height=680, min_size=(700, 600),
+            width=860, height=720, min_size=(700, 600),
             resizable=True,
-            bg_color=BG,
+            bg_color=BACKGROUND,
         )
     except Exception as e:
         log_error("create_viewport", e, e.__traceback__)
@@ -571,15 +680,15 @@ def main():
     try:
         with dpg.window(
             tag="main_window",
-            width=840, height=680,
+            width=860, height=720,
             pos=(0, 0),
             no_move=True,
-            no_close=True,
         ):
             dpg.add_text(
                 "Moka AI Installer",
                 tag="page_title",
                 color=ACCENT,
+                bold=True,
                 wrap=400,
             )
             dpg.add_separator(color=BORDER)
@@ -619,3 +728,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# Needed for platform.system() in hardware scan
+import platform
