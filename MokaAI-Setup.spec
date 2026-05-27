@@ -10,6 +10,13 @@ a = Analysis(
         ('installer/templates', 'templates'),
     ],
     hiddenimports=[
+        'installer',
+        'installer.core',
+        'installer.core.hardware',
+        'installer.core.models',
+        'installer.core.deps',
+        'installer.core.writer',
+        'installer.core.shortcuts',
         'dearpygui.dearpygui',
         'dearpygui.simple',
         'yaml',
