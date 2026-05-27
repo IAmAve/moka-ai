@@ -1,1 +1,0 @@
-"""Installer core business logic."""
