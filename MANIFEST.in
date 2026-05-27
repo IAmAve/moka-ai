@@ -1,0 +1,22 @@
+include LICENSE
+include README.md
+include pyproject.toml
+recursive-include workflows/templates *.json *.yaml
+recursive-include frontend *.html *.css *.js
+recursive-include config *.json *.yaml *.j2
+recursive-include plugins *.py
+recursive-include learning *.py *.yaml *.json
+recursive-include personality *.py
+recursive-include memory *.py
+recursive-include core *.py
+recursive-include core_runtime *.py
+recursive-include safety *.py
+recursive-include voice *.py
+recursive-include localization *.py
+recursive-include installer *.py *.yaml *.j2
+recursive-exclude tests *
+recursive-exclude docs *
+recursive-exclude ci *
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude .DS_Store

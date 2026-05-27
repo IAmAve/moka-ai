@@ -1,7 +1,8 @@
-import os, shutil, subprocess, uuid
+import os, shutil, subprocess, uuid, tempfile
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, Optional
+from pathlib import Path
 
 class SandboxStatus(Enum):
     PENDING = "pending"; READY = "ready"; RUNNING = "running"; DESTROYED = "destroyed"
@@ -15,13 +16,14 @@ class Sandbox:
     worktree_path: str; container_id: Optional[str]; status: SandboxStatus = SandboxStatus.PENDING
 
 class SandboxManager:
-    def __init__(self, base_path="d:/tmp/moka_sandboxes", base_branch="main", container_image="python:3.11-slim", logger=None):
-        self.base_path = base_path; self.base_branch = base_branch
+    def __init__(self, base_path=None, base_branch="main", container_image="python:3.11-slim", logger=None):
+        self.base_path = Path(base_path) if base_path else Path(tempfile.gettempdir()) / "moka_sandboxes"
+        self.base_branch = base_branch
         self.container_image = container_image
         self._logger = logger
         self._log = logger.info if logger else lambda m: None
         self._sandboxes: Dict[str, Sandbox] = {}
-        os.makedirs(base_path, exist_ok=True)
+        os.makedirs(self.base_path, exist_ok=True)
 
     def create_sandbox(self, workflow_id: str) -> str:
         sandbox_id = str(uuid.uuid4())[:8]

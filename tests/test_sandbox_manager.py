@@ -4,7 +4,7 @@ from core_runtime.sandbox_manager import SandboxManager, SandboxStatus, SandboxE
 
 class TestSandboxManager(unittest.TestCase):
     def setUp(self):
-        self.sm = SandboxManager(base_path="d:/tmp/moka_sandboxes", logger=None)
+        self.sm = SandboxManager(base_path=None, logger=None)  # uses tempfile.gettempdir()
 
     def test_sandbox_status_enum_exists(self):
         self.assertTrue(hasattr(SandboxStatus, 'PENDING'))
@@ -12,7 +12,10 @@ class TestSandboxManager(unittest.TestCase):
         self.assertTrue(hasattr(SandboxStatus, 'DESTROYED'))
 
     def test_init_stores_base_path(self):
-        self.assertEqual(self.sm.base_path, "d:/tmp/moka_sandboxes")
+        import tempfile
+        from pathlib import Path
+        expected = str(Path(tempfile.gettempdir()) / "moka_sandboxes")
+        self.assertEqual(str(self.sm.base_path), expected)
 
     def test_create_sandbox_returns_sandbox_id(self):
         sid = self.sm.create_sandbox("wf-001")

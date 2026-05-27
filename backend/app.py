@@ -3,6 +3,10 @@
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 from pathlib import Path
+import os
+os.environ["EVENTLET_NO_GREENDNS"] = "yes"
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*eventlet.*")
 import eventlet
 import threading
 import time

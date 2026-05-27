@@ -1,4 +1,5 @@
 # MOKA AI - Main Application Entry Point
+__version__ = "0.1.0"
 
 from config import Config
 from logger import Logger

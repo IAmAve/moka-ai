@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import platform
 import subprocess
+import sys
 from dataclasses import dataclass
 from typing import Optional
 
@@ -21,26 +23,40 @@ class HardwareProfile:
 
 
 class HardwareScanner:
-    """Scans system hardware: GPU (NVIDIA/AMD) and system RAM."""
+    """Scans system hardware: GPU (NVIDIA/AMD/Apple Silicon) and system RAM."""
 
     def scan(self) -> HardwareProfile:
         """Detect GPU and system RAM, return HardwareProfile."""
+        system = platform.system()
         gpu_model = "Unknown"
         vram_gb = 0.0
         compute_capability = None
 
-        # Try NVIDIA first, then AMD
-        nvidia_info = self._detect_nvidia()
-        if nvidia_info is not None:
-            gpu_model = nvidia_info["name"]
-            vram_gb = nvidia_info["vram_gb"]
-            compute_capability = nvidia_info.get("compute_capability")
+        if system == "Darwin":
+            metal_info = self._detect_metal()
+            if metal_info:
+                gpu_model = metal_info["name"]
+                vram_gb = metal_info["vram_gb"]
+                compute_capability = metal_info.get("compute_capability")
         else:
-            amd_info = self._detect_amd()
-            if amd_info is not None:
-                gpu_model = amd_info["name"]
-                vram_gb = amd_info["vram_gb"]
-                compute_capability = amd_info.get("compute_capability")
+            nvidia_info = self._detect_nvidia()
+            if nvidia_info is not None:
+                gpu_model = nvidia_info["name"]
+                vram_gb = nvidia_info["vram_gb"]
+                compute_capability = nvidia_info.get("compute_capability")
+            else:
+                amd_info = self._detect_amd()
+                if amd_info is not None:
+                    gpu_model = amd_info["name"]
+                    vram_gb = amd_info["vram_gb"]
+                    compute_capability = amd_info.get("compute_capability")
+
+        # Fallback: torch CUDA as last resort
+        if gpu_model == "Unknown":
+            torch_info = self._torch_cuda()
+            if torch_info:
+                gpu_model = torch_info["name"]
+                vram_gb = torch_info["vram_gb"]
 
         # System RAM (total and available)
         mem = psutil.virtual_memory()
@@ -92,8 +108,70 @@ class HardwareScanner:
             return None
 
     def _detect_amd(self) -> Optional[dict]:
-        """Detect AMD GPU. Placeholder - returns None."""
-        # TODO: Implement AMD detection via rocm-smi or Windows APIs
+        """Detect AMD GPU via rocm-smi."""
+        try:
+            r = subprocess.run(
+                ["rocm-smi", "--showid", "--showmeminfo", "vram", "--json"],
+                capture_output=True, text=True, timeout=10,
+            )
+            if r.returncode != 0:
+                return None
+            import json
+            data = json.loads(r.stdout)
+            for gpu_id, info in data.items():
+                vram_str = info.get("VRAM", {}).get("VRAM Used", "0")
+                try:
+                    vram_gb = round(float(vram_str.split()[0]) / 1024, 2) if vram_str else 0.0
+                except (ValueError, IndexError):
+                    vram_gb = 0.0
+                return {"name": f"AMD GPU {gpu_id}", "vram_gb": vram_gb, "compute_capability": None}
+            return None
+        except Exception:
+            return None
+
+    def _detect_metal(self) -> Optional[dict]:
+        """Detect Apple Silicon GPU via system_profiler."""
+        if platform.system() != "Darwin":
+            return None
+        try:
+            result = subprocess.run(
+                ["system_profiler", "SPDisplaysDataType", "-json"],
+                capture_output=True, text=True, timeout=15,
+            )
+            if result.returncode != 0:
+                return None
+            import json
+            data = json.loads(result.stdout)
+            gpus = data.get("SPDisplaysDataType", [])
+            if not gpus:
+                return None
+            gpu = gpus[0]
+            vram_str = gpu.get("VRAM", "0")
+            vram_gb = 0.0
+            try:
+                vram_gb = round(float(vram_str.split()[0]) / 1024, 2)
+            except (ValueError, IndexError):
+                pass
+            return {
+                "name": gpu.get("chip", "Apple Silicon"),
+                "vram_gb": vram_gb,
+                "compute_capability": None,
+            }
+        except Exception:
+            return None
+
+    def _torch_cuda(self) -> Optional[dict]:
+        """Try PyTorch CUDA as fallback GPU detection."""
+        try:
+            import torch
+            if torch.cuda.is_available():
+                return {
+                    "name": torch.cuda.get_device_name(0),
+                    "vram_gb": round(torch.cuda.get_device_properties(0).total_memory / (1024**3), 2),
+                    "compute_capability": None,
+                }
+        except ImportError:
+            pass
         return None
 
     def _auto_limits(self, vram_gb: float) -> dict:

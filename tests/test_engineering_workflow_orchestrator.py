@@ -1,4 +1,4 @@
-import unittest, sys, os
+import unittest, sys, os, tempfile
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core_runtime.engineering_workflow_orchestrator import (
     EngineeringWorkflowOrchestrator, WorkflowSpec, PipelineStage
@@ -10,7 +10,7 @@ class TestEWO(unittest.TestCase):
         return Sandbox(
             sandbox_id="fake-id", workflow_id="fake-wf",
             environment=SandboxEnvironment.TEMP,
-            worktree_path="d:/tmp/fake_worktree",
+            worktree_path=tempfile.gettempdir() + "/fake_worktree",
             container_id=None, status=SandboxStatus.READY
         )
 
