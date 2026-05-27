@@ -7,47 +7,16 @@ import sys
 
 def test_directories():
     """Test that all required directories exist"""
-    required_dirs = [
-        "config",
-        "data",
-        "logs",
-        "plugins",
-        "models",
-        "temp"
-    ]
+    required_dirs = ["config", "data", "logs", "plugins", "models", "temp"]
+    missing = [d for d in required_dirs if not os.path.exists(d)]
+    assert not missing, f"Missing directories: {missing}"
 
-    missing_dirs = []
-
-    for directory in required_dirs:
-        if not os.path.exists(directory):
-            missing_dirs.append(directory)
-
-    if missing_dirs:
-        print(f"Missing directories: {missing_dirs}")
-        return False
-
-    print("All required directories exist")
-    return True
 
 def test_files():
     """Test that required files exist"""
-    required_files = [
-        "moka.py",
-        "config/config.json"
-    ]
-
-    missing_files = []
-
-    for file in required_files:
-        if not os.path.exists(file):
-            missing_files.append(file)
-
-    if missing_files:
-        print(f"Missing files: {missing_files}")
-        return False
-
-    print("All required files exist")
-    return True
+    required_files = ["moka.py", "config/config.json"]
+    missing = [f for f in required_files if not os.path.exists(f)]
+    assert not missing, f"Missing files: {missing}"
 
 if __name__ == "__main__":
     print("Testing MOKA AI project structure...")
