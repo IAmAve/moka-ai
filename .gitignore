@@ -30,6 +30,7 @@ temp/
 # OS
 .DS_Store
 Thumbs.db
+nul
 
 # Test coverage
 .coverage
