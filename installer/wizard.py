@@ -431,7 +431,6 @@ def main():
         log_error("setup_dearpygui", e, e.__traceback__)
         log_file.close()
         return
-    dpg.set_exit_on_ESC(False)
     dpg.show_viewport()
     dpg.start_dearpygui()
     dpg.destroy_context()
