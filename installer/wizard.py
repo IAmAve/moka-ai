@@ -400,16 +400,7 @@ def main():
         resizable=True,
     )
 
-    # Dark theme via Dear PyGUI's built-in color theme
-    with dpg.theme(tag="installer_dark"):
-        with dpg.theme_group():
-            dpg.add_theme_color(dpg.mvThemeCol_WindowBg, (25, 25, 35))
-            dpg.add_theme_color(dpg.mvThemeCol_Text, (220, 220, 230))
-            dpg.add_theme_color(dpg.mvThemeCol_Button, (70, 110, 190))
-            dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (40, 40, 55))
-            dpg.add_theme_color(dpg.mvThemeCol_TitleBar, (30, 30, 50))
-    dpg.bind_theme("installer_dark")
-
+    # Use default DPG styling (dark theme handled via viewport background if needed)
     with dpg.window(tag="main_window", no_title_bar=False,
                     width=800, height=650, pos=(0, 0)):
         dpg.add_text("Moka AI Installer", tag="page_title", wrap=400)
