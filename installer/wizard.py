@@ -114,30 +114,8 @@ def _on_welcome_next():
 def build_hardware_page():
     with dpg.group(parent="hardware_page"):
         dpg.add_text("Hardware Scan", tag="hw_title", wrap=400)
-        dpg.add_text("We detected the following hardware:", color=(180, 180, 180))
-        dpg.add_spacing()
-
-        dpg.add_text("GPU:", color=(200, 200, 200))
         dpg.add_text("Detecting...", tag="hw_gpu")
-        dpg.add_spacing()
-        dpg.add_text("VRAM:", color=(200, 200, 200))
-        dpg.add_text("Detecting...", tag="hw_vram")
-        dpg.add_spacing()
-        dpg.add_text("System RAM:", color=(200, 200, 200))
-        dpg.add_text("Detecting...", tag="hw_ram")
-        dpg.add_spacing()
-        dpg.add_text("Platform:", color=(200, 200, 200))
-        dpg.add_text("Detecting...", tag="hw_platform")
-        dpg.add_spacing()
-
         dpg.add_button(label="Re-scan", tag="btn_rescan_hw", callback=_do_hardware_scan)
-        dpg.add_same_line()
-        dpg.add_button(
-            label="Next →",
-            tag="btn_next_from_hw",
-            callback=lambda: show_page("models_page"),
-            enabled=False,
-        )
 
 
 def _do_hardware_scan():
@@ -146,13 +124,9 @@ def _do_hardware_scan():
         state.hw_profile = scanner.scan()
         cc = state.hw_profile.compute_capability or "N/A"
         dpg.set_value("hw_gpu", f"{state.hw_profile.gpu_model} (compute {cc})")
-        dpg.set_value("hw_vram", f"{state.hw_profile.vram_gb} GB")
-        dpg.set_value("hw_ram", f"{state.hw_profile.system_ram_gb} GB")
-        dpg.set_value("hw_platform", state.hw_profile.platform)
         _log(f"Hardware scan: {state.hw_profile.gpu_model}, "
              f"{state.hw_profile.vram_gb}GB VRAM, "
              f"{state.hw_profile.system_ram_gb}GB RAM")
-        dpg.enable_item("btn_next_from_hw")
     except Exception as e:
         _log(f"Hardware scan failed: {e}")
 
@@ -201,20 +175,18 @@ def build_models_page():
         dpg.add_text("—", tag="model_total_size")
         dpg.add_spacing()
 
-        # Load model options after widgets are created
-        import dearpygui.dearpygui as dpg
-        dpg.insert_value(dpg.add_value_registry(), "model_base", "auto")
+        # Load model options after widgets are created - combo defaults to "auto"
 
-        dpg.add_button(
-            label="← Back",
-            callback=lambda: show_page("hardware_page"),
-        )
-        dpg.add_same_line()
-        dpg.add_button(
-            label="Install →",
-            tag="btn_next_from_models",
-            callback=_on_install_click,
-        )
+        with dpg.group(horizontal=True):
+            dpg.add_button(
+                label="← Back",
+                callback=lambda: show_page("hardware_page"),
+            )
+            dpg.add_button(
+                label="Install →",
+                tag="btn_next_from_models",
+                callback=_on_install_click,
+            )
 
         # Populate model combos
         _load_model_options()
@@ -392,36 +364,78 @@ def _on_finish():
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    dpg.create_context()
-    dpg.create_viewport(
-        title=f"Moka AI Installer v{INSTALLER_VERSION}",
-        width=800,
-        height=650,
-        resizable=True,
-    )
-
-    # Use default DPG styling (dark theme handled via viewport background if needed)
-    with dpg.window(tag="main_window", no_title_bar=False,
-                    width=800, height=650, pos=(0, 0)):
-        dpg.add_text("Moka AI Installer", tag="page_title", wrap=400)
-        dpg.add_separator()
-        dpg.add_spacing()
-
-        with dpg.group(tag="welcome_page", show=True):
-            build_welcome_page()
-        with dpg.group(tag="hardware_page", show=False):
-            build_hardware_page()
-        with dpg.group(tag="models_page", show=False):
-            build_models_page()
-        with dpg.group(tag="install_page", show=False):
-            build_install_page()
-        with dpg.group(tag="finish_page", show=False):
-            build_finish_page()
-
-    dpg.setup_dearpygui()
+    import os
+    import traceback
+    log_path = os.path.join(os.environ.get("TEMP", "C:\\Users\\Ave\\AppData\\Local\\Temp"), "moka_install.log")
+    log_file = open(log_path, "w", buffering=1)
+    def log(msg):
+        log_file.write(msg + "\n")
+        log_file.flush()
+    def log_error(label, e, tb):
+        log(f"[ERROR] {label}: {e}")
+        tb_str = ''.join(traceback.format_exception(type(e), e, tb))
+        log_file.write(tb_str)
+        log_file.flush()
+    log("Moka AI Installer starting")
+    try:
+        dpg.create_context()
+    except Exception as e:
+        log_error("create_context", e, e.__traceback__)
+        log_file.close()
+        return
+    try:
+        dpg.create_viewport(
+            title=f"Moka AI Installer v{INSTALLER_VERSION}",
+            width=800, height=650, resizable=True,
+        )
+    except Exception as e:
+        log_error("create_viewport", e, e.__traceback__)
+        log_file.close()
+        return
+    try:
+        with dpg.window(tag="main_window", width=800, height=650, pos=(0, 0)):
+            dpg.add_text("Moka AI Installer", tag="page_title", wrap=400)
+            dpg.add_separator()
+            try:
+                with dpg.group(tag="welcome_page", show=True):
+                    build_welcome_page()
+            except Exception as e:
+                log_error("welcome_page", e, e.__traceback__)
+            try:
+                with dpg.group(tag="hardware_page", show=False):
+                    build_hardware_page()
+            except Exception as e:
+                log_error("hardware_page", e, e.__traceback__)
+            try:
+                with dpg.group(tag="models_page", show=False):
+                    build_models_page()
+            except Exception as e:
+                log_error("models_page", e, e.__traceback__)
+            try:
+                with dpg.group(tag="install_page", show=False):
+                    build_install_page()
+            except Exception as e:
+                log_error("install_page", e, e.__traceback__)
+            try:
+                with dpg.group(tag="finish_page", show=False):
+                    build_finish_page()
+            except Exception as e:
+                log_error("finish_page", e, e.__traceback__)
+    except Exception as e:
+        log_error("window build", e, e.__traceback__)
+        log_file.close()
+        return
+    try:
+        dpg.setup_dearpygui()
+    except Exception as e:
+        log_error("setup_dearpygui", e, e.__traceback__)
+        log_file.close()
+        return
+    dpg.set_exit_on_ESC(False)
     dpg.show_viewport()
     dpg.start_dearpygui()
     dpg.destroy_context()
+    log_file.close()
 
 
 if __name__ == "__main__":
