@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moka AI Setup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Step dots nav -->
+    <nav id="step-nav">
+      <div class="step-dots">
+        <button class="step-dot active" data-step="1"><span class="dot"></span><span class="label">Welcome</span></button>
+        <button class="step-dot" data-step="2"><span class="dot"></span><span class="label">Hardware</span></button>
+        <button class="step-dot" data-step="3"><span class="dot"></span><span class="label">Models</span></button>
+        <button class="step-dot" data-step="4"><span class="dot"></span><span class="label">Installing</span></button>
+        <button class="step-dot" data-step="5"><span class="dot"></span><span class="label">Complete</span></button>
+      </div>
+    </nav>
+
+    <!-- Step 1: Welcome -->
+    <section id="step-1" class="step active">
+      <div class="orb-container">
+        <canvas id="orb" width="100" height="100"></canvas>
+      </div>
+      <h1 class="wordmark">Moka <span>AI</span></h1>
+      <p class="version-tag">v2.0 Installer</p>
+
+      <div class="form-group">
+        <label>Installation path</label>
+        <div class="path-row">
+          <input type="text" id="install-path" class="input" value="" placeholder="C:\Program Files\Moka AI" />
+          <button id="btn-browse" class="btn-ghost">Browse</button>
+        </div>
+        <span class="path-validation" id="path-validation"></span>
+      </div>
+
+      <button id="btn-get-started" class="btn-primary" disabled>Get Started</button>
+    </section>
+
+    <!-- Step 2: Hardware Scan -->
+    <section id="step-2" class="step">
+      <h2>Hardware Scan</h2>
+      <p class="scan-hint" id="scan-hint">Scanning your system...</p>
+      <div id="hw-cards" class="cards-grid"></div>
+      <button id="btn-rescan" class="btn-ghost btn-rescan" style="display:none">Rescan</button>
+      <button id="btn-continue-hw" class="btn-primary" disabled>Continue</button>
+    </section>
+
+    <!-- Step 3: Model Selection -->
+    <section id="step-3" class="step">
+      <h2>Choose Models</h2>
+      <div id="vram-badge" class="vram-badge"></div>
+      <div class="model-rows">
+        <div class="model-row">
+          <span class="model-icon">&#129302;</span>
+          <div class="model-info">
+            <label>Coding & Reasoning</label>
+            <select id="model-base" class="input"></select>
+          </div>
+          <span class="size-pill" id="size-base">&#8212;</span>
+        </div>
+        <div class="model-row">
+          <span class="model-icon">&#127912;</span>
+          <div class="model-info">
+            <label>Image Generation</label>
+            <select id="model-image" class="input"></select>
+          </div>
+          <span class="size-pill" id="size-image">&#8212;</span>
+        </div>
+        <div class="model-row">
+          <span class="model-icon">&#127909;</span>
+          <div class="model-info">
+            <label>Voice (TTS + STT)</label>
+            <select id="model-voice" class="input"></select>
+          </div>
+          <span class="size-pill" id="size-voice">&#8212;</span>
+        </div>
+      </div>
+      <p id="total-size" class="total-size"></p>
+      <div class="step-nav">
+        <button id="btn-back-models" class="btn-ghost">Back</button>
+        <button id="btn-install" class="btn-primary">Install &#8594;</button>
+      </div>
+    </section>
+
+    <!-- Step 4: Installing -->
+    <section id="step-4" class="step">
+      <h2>Installing</h2>
+      <div class="progress-header">
+        <span id="install-status">Preparing packages&#8230;</span>
+        <span id="install-pct" class="pct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <div id="pkg-list" class="pkg-list"></div>
+      <button id="btn-toggle-log" class="btn-ghost btn-sm">Show log &#9660;</button>
+      <div id="log-pane" class="log-pane" style="display:none"></div>
+    </section>
+
+    <!-- Step 5: Complete -->
+    <section id="step-5" class="step">
+      <div class="orb-container">
+        <canvas id="orb-complete" width="100" height="100"></canvas>
+      </div>
+      <div class="check-icon">&#10003;</div>
+      <h2>Moka AI is ready</h2>
+      <p class="shortcut-path" id="shortcut-path"></p>
+      <div class="checkbox-group">
+        <label><input type="checkbox" id="chk-desktop" checked /> Create Desktop Shortcut</label>
+        <label><input type="checkbox" id="chk-startmenu" checked /> Create Start Menu Shortcut</label>
+        <label><input type="checkbox" id="chk-launch" checked /> Launch Moka AI now</label>
+      </div>
+      <button id="btn-finish" class="btn-primary">Finish Setup</button>
+    </section>
+  </div>
+  <script src="wizard.js"></script>
+</body>
+</html>
