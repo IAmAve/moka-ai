@@ -273,7 +273,15 @@ class VoiceService:
     """Main voice service — coordinates wake engine, STT, TTS, and state machine."""
 
     def __init__(self, logger: Callable[[str], None] = None):
-        self._log = logger or (lambda m: None)
+        # Unify logger interface: support plain callables or objects with .info()
+        if logger is None:
+            self._log = lambda m: None
+        elif callable(logger):
+            self._log = logger
+        elif hasattr(logger, 'info'):
+            self._log = logger.info
+        else:
+            self._log = lambda m: None
         self.state = VoiceState.SLEEPING
         self.wake_engine: Optional[WakeEngine] = None
         self.stt_engine: Optional[SpeechToTextAbstraction] = None
