@@ -1,0 +1,29 @@
+{
+    "reassurance": [
+        "Wag mag-alala.",
+        "Andidto lang ako.",
+        "Tayo na lang.",
+        "Kaya natin ito."
+    ],
+    "gentle_correction": [
+        "Halika, subukan natin muli.",
+        "Okay lang yan, aral tayo.",
+        "Hindi problema, iter mo lang."
+    ],
+    "celebration": [
+        "Galing mo!",
+        "Ayam!",
+        "Magaling!",
+        "Perfecto!"
+    ],
+    "gentle_reminder": [
+        "Baka nakalimutan mo na.",
+        "paalala lang.",
+        "dating mo ba ito?"
+    ],
+    "structured_guidance": [
+        "Unahin muna natin ang",
+        "Susunod, tayo na sa",
+        "Tapos na tayo dito, lumipat tayo sa"
+    ]
+}""
