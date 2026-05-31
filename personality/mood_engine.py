@@ -42,5 +42,15 @@ class MoodEngine:
             self.update_mood(context["mood"], context.get("intensity", 1.0))
 
     def calculate_mood_from_sentiment(self, text: str) -> str:
-        """Calculate mood state from text sentiment"""
-        return "neutral"
+        """Calculate mood state from text sentiment using TextBlob polarity."""
+        try:
+            from textblob import TextBlob
+            polarity = TextBlob(text).sentiment.polarity
+            if polarity > 0.3:
+                return "encouraging"
+            elif polarity < -0.3:
+                return "strict"
+            else:
+                return "neutral"
+        except Exception:
+            return "neutral"

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem . -Filter \"*.exe\" -Recurse -File -EA SilentlyContinue)",
+      "Bash(Select -First 10 FullName, Length)",
+      "Bash(Format-Table -Auto)"
+    ]
+  }
+}
