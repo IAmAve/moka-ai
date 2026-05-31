@@ -381,3 +381,66 @@ class SafetyService:
     @property
     def emergency_stop(self):
         return self._estop
+
+
+# ── Phase 12: Module Registry ──────────────────────────────────────────────────
+
+from core.module_registry import ModuleRegistry, ModuleMetadata
+
+
+class Phase12ModuleRegistryService:
+    """Wraps ModuleRegistry — tracks all registered Moka AI modules and their
+    lifecycle state. Used by PluginManager and future hot-reload / DI scanning."""
+
+    def __init__(self, event_bus=None, logger=None):
+        self._log = logger.info if logger else lambda *_: None
+        self._event_bus = event_bus
+        self._registry = ModuleRegistry()
+
+    def start(self):
+        self._log("[Phase12ModuleRegistryService] ModuleRegistry started")
+
+    def stop(self):
+        self._log("[Phase12ModuleRegistryService] ModuleRegistry stopped")
+
+    @property
+    def registry(self) -> ModuleRegistry:
+        return self._registry
+
+
+# ── Phase 13: Migration Manager ────────────────────────────────────────────────
+
+from core.migration_manager import MigrationManager
+
+
+class Phase13MigrationManagerService:
+    """Wraps MigrationManager — runs forward/backward database and config
+    migrations. Migrations are registered at startup by each subsystem."""
+
+    def __init__(self, event_bus=None, logger=None):
+        self._log = logger.info if logger else lambda *_: None
+        self._event_bus = event_bus
+        self._manager = MigrationManager()
+        self._started = False
+
+    def start(self):
+        self._started = True
+        self._log("[Phase13MigrationManagerService] MigrationManager started")
+        if self._event_bus:
+            self._event_bus.subscribe("migrations:run", self._on_run)
+            self._event_bus.subscribe("migrations:rollback", self._on_rollback)
+
+    def stop(self):
+        self._started = False
+        self._log("[Phase13MigrationManagerService] MigrationManager stopped")
+
+    def _on_run(self, _data):
+        return self._manager.migrate()
+
+    def _on_rollback(self, data):
+        to_version = data.get("to_version", "0.0.0")
+        return self._manager.rollback(to_version)
+
+    @property
+    def migration_manager(self) -> MigrationManager:
+        return self._manager

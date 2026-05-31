@@ -52,7 +52,7 @@ class DesktopRuntimeManager:
 
     def get_software_profiles(self):
         """Return list of software profiles from the profile engine."""
-        db = self._engine.db
+        db = self._engine._db
         return [p for p in db.profiles.values()] if hasattr(db, 'profiles') else []
 
     def get_cache(self) -> DesktopRuntimeCache:

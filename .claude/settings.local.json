@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git show-ref *)",
+      "Bash(findstr \"phase-9\")",
+      "Bash(git checkout *)"
+    ]
+  }
+}

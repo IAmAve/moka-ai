@@ -126,3 +126,49 @@ class ConfigWriter:
             return True
         except Exception:
             return False
+
+    @staticmethod
+    def write_credentials(
+        path: str,
+        openai_api_key: str = "",
+        anthropic_api_key: str = "",
+        custom_endpoint: str = "",
+        local_only: bool = True,
+    ) -> str:
+        """Write API credentials to a protected credentials.json file.
+
+        The file is stored inside config/ and is NOT included in any log output.
+        Returns the path to the written file.
+        """
+        import json as _json
+        path = Path(path)
+        config_dir = path / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+
+        creds = {
+            "openai_api_key": openai_api_key,
+            "anthropic_api_key": anthropic_api_key,
+            "custom_endpoint": custom_endpoint,
+            "local_only": local_only,
+        }
+        # Only write non-empty API keys to avoid blank entries
+        if not openai_api_key:
+            creds.pop("openai_api_key", None)
+        if not anthropic_api_key:
+            creds.pop("anthropic_api_key", None)
+        if not custom_endpoint:
+            creds.pop("custom_endpoint", None)
+
+        cred_path = config_dir / "credentials.json"
+        with open(cred_path, "w") as f:
+            _json.dump(creds, f, indent=2)
+
+        # Make it hidden on Windows so casual browsing doesn't show it
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                ctypes.windll.kernel32.SetFileAttributesW(str(cred_path), 0x02)  # FILE_ATTRIBUTE_HIDDEN
+            except Exception:
+                pass
+
+        return str(cred_path)

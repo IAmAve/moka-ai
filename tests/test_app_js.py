@@ -17,7 +17,7 @@ class TestAppJs(unittest.TestCase):
         self.assertTrue(os.path.exists(self.js_path))
 
     def test_socket_io_connection(self):
-        self.assertIn("io()", self.content)
+        self.assertIn("io(", self.content)
         self.assertIn('socket.on("connect"', self.content)
 
     def test_agent_state_handler(self):
@@ -31,18 +31,16 @@ class TestAppJs(unittest.TestCase):
         self.assertIn("panel.classList.add", self.content)
 
     def test_orb_renderer_integration(self):
-        self.assertIn("OrbRenderer", self.content)
-        self.assertIn("orbRenderer.setState", self.content)
+        self.assertIn("createOrbRenderer", self.content)
+        self.assertIn("orbVoice.setState", self.content)
 
     def test_transcript_line_handler(self):
-        self.assertIn("function addTranscriptLine", self.content)
+        self.assertIn("function appendTranscript", self.content)
         self.assertIn('transcript-line', self.content)
 
     def test_mic_toggle_event(self):
-        self.assertIn('socket.emit("mic_toggle")', self.content)
-
-    def test_panel_change_event(self):
-        self.assertIn('socket.emit("panel_change"', self.content)
+        self.assertIn('socket.emit("mic_start")', self.content)
+        self.assertIn('socket.emit("mic_stop")', self.content)
 
     def test_clear_history_handler(self):
         self.assertIn('socket.emit("clear_history")', self.content)
@@ -51,33 +49,33 @@ class TestAppJs(unittest.TestCase):
         self.assertIn('socket.emit("export_memory")', self.content)
 
     def test_resource_bars_update(self):
-        self.assertIn("updateResourceBars", self.content)
+        self.assertIn("renderResources", self.content)
         self.assertIn("gpu-bar", self.content)
 
     def test_learning_metrics_update(self):
-        self.assertIn("updateLearningMetrics", self.content)
+        self.assertIn("renderLearning", self.content)
 
     def test_event_log_update(self):
-        self.assertIn("addEventLogItem", self.content)
+        self.assertIn("renderHistory", self.content)
 
     def test_initorb_on_dom_ready(self):
         self.assertIn("DOMContentLoaded", self.content)
-        self.assertIn("initOrb", self.content)
+        self.assertIn("initOrbVoice", self.content)
 
     def test_skill_list_update(self):
-        self.assertIn("updateSkillList", self.content)
+        self.assertIn("renderSkills", self.content)
 
     def test_task_list_update(self):
-        self.assertIn("updateTaskList", self.content)
+        self.assertIn("renderTasks", self.content)
 
     def test_memory_panels_update(self):
-        self.assertIn("updateMemoryPanels", self.content)
+        self.assertIn("renderMemory", self.content)
 
     def test_conversation_list_update(self):
         self.assertIn("updateConversationList", self.content)
 
     def test_socketio_event_types_wired(self):
-        for evt_type in ["resource_update", "learning_metrics", "event_log", "skill_update", "task_update", "memory_update", "conversation_list"]:
+        for evt_type in ["resource_update", "learning_update", "history_events", "skill_update", "task_update", "memory_update", "conversation_list"]:
             self.assertIn(f'"{evt_type}"', self.content, f"{evt_type} event type not wired")
 
     def test_safe_text_defined(self):

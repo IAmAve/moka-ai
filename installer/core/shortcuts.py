@@ -109,3 +109,81 @@ Categories=Utility;AI;
         path.write_text(content)
         os.chmod(path, 0o755)
         return str(path)
+
+    # ── Task Scheduler (Windows auto-start) ────────────────────────────────
+
+    def create_auto_start_task(self, task_name: str = "MokaAI") -> bool:
+        """Register Moka AI to start automatically when the user logs into Windows.
+
+        Uses Windows Task Scheduler (schtasks.exe) with ONLOGON trigger.
+        RL LIMITED = run with user's lowest privilege level, no admin required.
+
+        Returns True on success, False on failure.
+        """
+        if sys.platform != "win32":
+            return False
+
+        moka_py    = self.moka_script
+        python_exe = self.moka_exe
+
+        # Remove any existing task first (ignore errors)
+        subprocess.run(
+            ["schtasks", "/Delete", "/TN", task_name, "/F"],
+            capture_output=True, timeout=10,
+        )
+
+        trigger_cmd = [
+            "schtasks",
+            "/Create",
+            "/TN",   task_name,
+            "/TR",   f'"{python_exe}" "{moka_py}"',
+            "/SC",   "ONLOGON",
+            "/RL",   "LIMITED",
+            "/F",
+        ]
+
+        try:
+            result = subprocess.run(
+                trigger_cmd,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode == 0:
+                self._log(f"[Shortcuts] Auto-start task '{task_name}' created")
+                return True
+            self._log(f"[Shortcuts] Auto-start task failed: {result.stderr[:300]}")
+            return False
+        except Exception as e:
+            self._log(f"[Shortcuts] Auto-start task error: {e}")
+            return False
+
+    def remove_auto_start_task(self, task_name: str = "MokaAI") -> bool:
+        """Remove the Moka AI auto-start Task Scheduler entry. Returns True on success."""
+        if sys.platform != "win32":
+            return False
+        try:
+            result = subprocess.run(
+                ["schtasks", "/Delete", "/TN", task_name, "/F"],
+                capture_output=True, text=True, timeout=10,
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+
+    def is_auto_start_enabled(self, task_name: str = "MokaAI") -> bool:
+        """Return True if the auto-start task exists in Task Scheduler."""
+        if sys.platform != "win32":
+            return False
+        try:
+            result = subprocess.run(
+                ["schtasks", "/Query", "/TN", task_name],
+                capture_output=True, text=True, timeout=10,
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+
+    def _log(self, msg: str):
+        """Internal logger (set to a callable by WizardAPI to capture output)."""
+        print(msg)

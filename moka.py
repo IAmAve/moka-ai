@@ -16,7 +16,8 @@ from core_runtime.engineering_workflow_orchestrator import EngineeringWorkflowOr
 from core_runtime.image_runtime_manager import ImageRuntimeManager
 from core.services import (
     Phase1OrchestratorService, PersonalityService, VoiceService,
-    MemoryService, LearningService, SafetyService
+    MemoryService, LearningService, SafetyService,
+    Phase12ModuleRegistryService, Phase13MigrationManagerService,
 )
 
 class MokaAI:
@@ -66,6 +67,14 @@ class MokaAI:
         self.safety_service = SafetyService(
             event_bus=self.event_bus, logger=self.logger
         )
+        # Phase 12 — Module Registry
+        self.phase12_module_registry = Phase12ModuleRegistryService(
+            event_bus=self.event_bus, logger=self.logger
+        )
+        # Phase 13 — Migration Manager
+        self.phase13_migration_manager = Phase13MigrationManagerService(
+            event_bus=self.event_bus, logger=self.logger
+        )
 
     def initialize(self):
         # 1. Environment validation
@@ -103,6 +112,12 @@ class MokaAI:
         # 10. Start health monitoring
         self.health_monitor.start()
 
+        # Phase 13: run pending migrations at startup
+        try:
+            self.phase13_migration_manager.migration_manager.migrate()
+        except Exception as e:
+            self.logger.warning(f"Migration run incomplete: {e}")
+
         self.logger.info("MOKA AI initialized successfully")
         self.initialized = True
 
@@ -125,6 +140,8 @@ class MokaAI:
         self.dIContainer.register("memory_service", lambda: self.memory_service)
         self.dIContainer.register("learning_service", lambda: self.learning_service)
         self.dIContainer.register("safety_service", lambda: self.safety_service)
+        self.dIContainer.register("phase12_module_registry", lambda: self.phase12_module_registry)
+        self.dIContainer.register("phase13_migration_manager", lambda: self.phase13_migration_manager)
 
         # ServiceManager registration for start()/stop() lifecycle
         self.service_manager.register_service("phase1_orchestrator", self.phase1_orchestrator)
@@ -133,6 +150,8 @@ class MokaAI:
         self.service_manager.register_service("memory_service", self.memory_service)
         self.service_manager.register_service("learning_service", self.learning_service)
         self.service_manager.register_service("safety_service", self.safety_service)
+        self.service_manager.register_service("phase12_module_registry", self.phase12_module_registry)
+        self.service_manager.register_service("phase13_migration_manager", self.phase13_migration_manager)
 
     def _register_core_services(self):
         self.service_manager.register_service("health_monitor", self.health_monitor)
@@ -164,6 +183,8 @@ class MokaAI:
             ("memory_service", lambda: self.memory_service),
             ("learning_service", lambda: self.learning_service),
             ("safety_service", lambda: self.safety_service),
+            ("phase12_module_registry", lambda: self.phase12_module_registry),
+            ("phase13_migration_manager", lambda: self.phase13_migration_manager),
         ]
         for name, check_fn in checks:
             try:
@@ -191,6 +212,10 @@ class MokaAI:
         # Phase 1-7 graceful shutdown (in reverse dependency order)
         if hasattr(self, 'safety_service'):
             self.safety_service.stop()
+        if hasattr(self, 'phase13_migration_manager'):
+            self.phase13_migration_manager.stop()
+        if hasattr(self, 'phase12_module_registry'):
+            self.phase12_module_registry.stop()
         if hasattr(self, 'learning_service'):
             self.learning_service.stop()
         if hasattr(self, 'memory_service'):

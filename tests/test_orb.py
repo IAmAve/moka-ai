@@ -53,7 +53,7 @@ class TestOrbJs(unittest.TestCase):
         self.assertIn("_pulseFactor", self.content)
 
     def test_wake_burst_triggered_on_listening_transition(self):
-        self.assertIn('prev === "listening"', self.content)
+        self.assertIn("prev === 'listening'", self.content)
 
 
 if __name__ == "__main__":

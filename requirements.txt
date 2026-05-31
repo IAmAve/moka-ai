@@ -28,6 +28,7 @@
 ### Voice Service
 - speechrecognition
 - pyttsx3
+- TTS
 
 ### Configuration
 - pyyaml
@@ -36,6 +37,8 @@
 ### Utilities
 - psutil
 - requests
+- httpx  # async concurrent HTTP for HF model search
 
 ### Sentiment Analysis
 - textblob
+- huggingface_hub>=0.20.0

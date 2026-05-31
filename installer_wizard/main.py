@@ -24,11 +24,13 @@ def create_window():
         title="Moka AI Setup",
         url=index_path,
         width=780,
-        height=580,
-        min_size=(720, 520),
+        height=820,
+        min_size=(720, 640),
         resizable=True,
         js_api=api,
         text_select=False,
+        frameless=True,
+        easy_drag=True,
     )
 
 
@@ -42,6 +44,8 @@ def main():
             pass
 
     window = create_window()
+    api = WizardAPI.get_instance()
+    api._window = window
     debug = os.environ.get("MOKA_DEBUG", "0") == "1"
     webview.start(debug=debug)
     # After window closes, Python exits cleanly

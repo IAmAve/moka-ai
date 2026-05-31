@@ -146,6 +146,13 @@ class HardwareScan:
                     continue
                 vram_bytes = ctrl.get("AdapterRAM") or 0
                 vram_gb = round(vram_bytes / (1024**3), 2) if vram_bytes > 0 else 0.0
+                # WMI AdapterRAM for AMD GPUs frequently under-reports actual VRAM
+                # (e.g., reports 4GB on 8GB RX 580/570 cards)
+                name_lower = name.lower()
+                if "rx 580" in name_lower or "rx 570" in name_lower or "rx 560" in name_lower:
+                    # Only upgrade if WMI reports ≤ 4 and this is a known 8GB variant
+                    if vram_gb <= 4.0:
+                        vram_gb = 8.0
                 gpus.append((name, vram_gb))
             return gpus
         except Exception:

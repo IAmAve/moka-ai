@@ -1,99 +1,133 @@
 # Model tier definitions for Moka AI installer
-# VRAM tiers map to recommended base/image/voice models
+# All models downloaded from GitHub Releases (IAmAve/moka-ai-models)
+# as GGUF files — loaded directly by llama.cpp (no Ollama, no cloud).
+#
+# BASE MODELS: DeepSeek Coder and Qwen Coder — specialized for coding,
+# reasoning, and instruction following. All use Q4_K_M quantization
+# (good quality / VRAM balance). XTTS v2 for voice (embedded offline).
+#
+# ⚠️  Upload these exact GGUF filenames to your GitHub release asset:
+#
+#   Tier 4GB   → codeqwen1.5-1_5b-q4_k_m.gguf     (~1.3 GB)
+#   Tier 8GB   → deepseek-coder-7b-q4_k_m.gguf    (~4.1 GB)
+#   Tier 12GB  → deepseek-coder-7b-q4_k_m.gguf    (~4.1 GB) [same file as tier 8]
+#   Tier 16GB  → deepseek-coder-7b-q5_k_m.gguf    (~5.1 GB)
+#   Tier 24GB  → deepseek-coder-33b-q4_k_m.gguf   (~18 GB)
+#   Voice      → xttsv2-female.tar.gz              (~400 MB, already uploaded)
+#
+# DeepSeek Coder: trained on 60% code / 40% natural language — best-in-class
+# for actual code generation, debugging, and explaining code.
+# Qwen Coder: strong multilingual coding, good for Tagalog-English mixed code comments.
+# Both support instruction following for the companion's mentoring behavior.
 
 tiers:
   4:
     base:
-      name: "llama3.2:1b"
-      hf_id: "meta-llama/Llama-3.2-1B"
-      size_gb: 0.7
-      min_vram_gb: 4
+      name: "codeqwen1.5-1.5b"
+      github_asset: "codeqwen1.5-1_5b-q4_k_m.gguf"
+      github_tag: "v1.0"
+      size_gb: 1.3
+      min_vram_gb: 3
       type: base
     image:
-      name: "sd-turbo (CPU)"
-      hf_id: "stabilityai/sd-turbo"
-      size_gb: 1.5
+      name: "sd-turbo-fp16"
+      github_asset: "sd-turbo-fp16.safetensors"
+      github_tag: "v1.0"
+      size_gb: 1.6
       min_vram_gb: 0
       type: image
     voice:
-      name: "silero-tiny"
-      hf_id: "snakers4/silero-vad"
-      size_gb: 0.1
+      name: "xttsv2-female"
+      github_asset: "xttsv2-female.tar.gz"
+      github_tag: "v1.0"
+      size_gb: 0.4
       min_vram_gb: 0
       type: voice
   8:
     base:
-      name: "llama3.2:3b"
-      hf_id: "meta-llama/Llama-3.2-3B"
-      size_gb: 2.0
+      name: "deepseek-coder-7b"
+      github_asset: "deepseek-coder-7b-q4_k_m.gguf"
+      github_tag: "v1.0"
+      size_gb: 4.1
       min_vram_gb: 6
       type: base
     image:
-      name: "sd-turbo"
-      hf_id: "stabilityai/sd-turbo"
-      size_gb: 1.5
+      name: "sd-turbo-fp16"
+      github_asset: "sd-turbo-fp16.safetensors"
+      github_tag: "v1.0"
+      size_gb: 1.6
       min_vram_gb: 4
       type: image
     voice:
-      name: "silero-small"
-      hf_id: "snakers4/silero-vad"
-      size_gb: 0.3
+      name: "xttsv2-female"
+      github_asset: "xttsv2-female.tar.gz"
+      github_tag: "v1.0"
+      size_gb: 0.4
       min_vram_gb: 0
       type: voice
   12:
     base:
-      name: "mistral-7b"
-      hf_id: "mistralai/Mistral-7B-v0.1"
+      name: "deepseek-coder-7b"
+      github_asset: "deepseek-coder-7b-q4_k_m.gguf"
+      github_tag: "v1.0"
       size_gb: 4.1
       min_vram_gb: 10
       type: base
     image:
-      name: "sd-xl-lite"
-      hf_id: "stabilityai/stable-diffusion-xl-base-1.0"
+      name: "sdxl-lite-fp16"
+      github_asset: "sdxl-lite-fp16.safetensors"
+      github_tag: "v1.0"
       size_gb: 6.5
       min_vram_gb: 8
       type: image
     voice:
-      name: "silero-small"
-      hf_id: "snakers4/silero-vad"
-      size_gb: 0.3
+      name: "xttsv2-female"
+      github_asset: "xttsv2-female.tar.gz"
+      github_tag: "v1.0"
+      size_gb: 0.4
       min_vram_gb: 0
       type: voice
   16:
     base:
-      name: "deepseek-coder-7b"
-      hf_id: "deepseek-ai/deepseek-coder-7b-instruct"
-      size_gb: 4.0
-      min_vram_gb: 12
+      name: "deepseek-coder-7b-q5"
+      github_asset: "deepseek-coder-7b-q5_k_m.gguf"
+      github_tag: "v1.0"
+      size_gb: 5.1
+      min_vram_gb: 14
       type: base
     image:
-      name: "sd-xl"
-      hf_id: "stabilityai/stable-diffusion-xl-base-1.0"
+      name: "sdxl-fp16"
+      github_asset: "sdxl-fp16.safetensors"
+      github_tag: "v1.0"
       size_gb: 6.5
       min_vram_gb: 12
       type: image
     voice:
-      name: "silero-medium"
-      hf_id: "snakers4/silero-vad"
-      size_gb: 0.5
+      name: "xttsv2-female"
+      github_asset: "xttsv2-female.tar.gz"
+      github_tag: "v1.0"
+      size_gb: 0.4
       min_vram_gb: 0
       type: voice
   24:
     base:
       name: "deepseek-coder-33b"
-      hf_id: "deepseek-ai/deepseek-coder-33b-instruct"
+      github_asset: "deepseek-coder-33b-q4_k_m.gguf"
+      github_tag: "v1.0"
       size_gb: 18.0
       min_vram_gb: 20
       type: base
     image:
-      name: "sd-xl-high"
-      hf_id: "stabilityai/stable-diffusion-xl-base-1.0"
+      name: "sdxl-high-fp16"
+      github_asset: "sdxl-high-fp16.safetensors"
+      github_tag: "v1.0"
       size_gb: 6.5
       min_vram_gb: 16
       type: image
     voice:
-      name: "silero-medium"
-      hf_id: "snakers4/silero-vad"
-      size_gb: 0.5
+      name: "xttsv2-female"
+      github_asset: "xttsv2-female.tar.gz"
+      github_tag: "v1.0"
+      size_gb: 0.4
       min_vram_gb: 0
       type: voice
