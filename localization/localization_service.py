@@ -1,0 +1,1 @@
+from .tagalog.localization_service import LocalizationService
