@@ -7,7 +7,7 @@ import os
 import sys
 import json
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -142,6 +142,43 @@ class TestConfidenceScoringSystem(unittest.TestCase):
         }
         score = self.system.calculate_confidence_score(pattern)
         self.assertGreaterEqual(score, 0)
+
+    def test_calculate_confidence_with_recency(self):
+        # Test that recent behaviors get higher recency scores
+        recent_pattern = {
+            'last_observed': datetime.now().isoformat()
+        }
+        old_pattern = {
+            'last_observed': (datetime.now() - timedelta(days=30)).isoformat()
+        }
+
+        recent_score = self.system._calculate_recency(recent_pattern)
+        old_score = self.system._calculate_recency(old_pattern)
+
+        self.assertGreater(recent_score, old_score)
+        self.assertGreaterEqual(recent_score, 0.0)
+        self.assertLessEqual(recent_score, 1.0)
+        self.assertGreaterEqual(old_score, 0.0)
+        self.assertLessEqual(old_score, 1.0)
+
+    def test_calculate_confidence_with_context_match(self):
+        # Test context matching
+        pattern_with_context = {
+            'context_data': {'key': 'value'}
+        }
+        pattern_without_context = {
+            'context_data': {}
+        }
+
+        with_context_score = self.system._calculate_context_match(pattern_with_context)
+        without_context_score = self.system._calculate_context_match(pattern_without_context)
+
+        # With context should score higher than without
+        self.assertGreater(with_context_score, without_context_score)
+        self.assertGreaterEqual(with_context_score, 0.0)
+        self.assertLessEqual(with_context_score, 1.0)
+        self.assertGreaterEqual(without_context_score, 0.0)
+        self.assertLessEqual(without_context_score, 1.0)
 
     def test_should_learn_behavior(self):
         self.assertTrue(self.system.should_learn_behavior(0.9))

@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img">
+  <title>Project MOKA</title>
+  <desc>A warm, minimalist logo featuring a stylized silhouette of a girl walking with a dog, labeled Project MOKA</desc>
+
+  <defs>
+    <!-- Warm card gradient -->
+    <radialGradient id="bg-glow" cx="50%" cy="38%" r="58%">
+      <stop offset="0%" stop-color="#FAF5EE"/>
+      <stop offset="100%" stop-color="#EDE3D6"/>
+    </radialGradient>
+    <!-- Amber orb glow for accent -->
+    <radialGradient id="orb-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#C9956A" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#C9956A" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Text gradient -->
+    <linearGradient id="text-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3D2410"/>
+      <stop offset="100%" stop-color="#2C1A0E"/>
+    </linearGradient>
+    <!-- Dog fill gradient -->
+    <linearGradient id="dog-fill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#C9956A"/>
+      <stop offset="100%" stop-color="#A6734A"/>
+    </linearGradient>
+    <!-- Girl fill gradient -->
+    <linearGradient id="girl-fill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2C1A0E"/>
+      <stop offset="100%" stop-color="#1A0E06"/>
+    </linearGradient>
+    <!-- Soft drop shadow filter -->
+    <filter id="soft-shadow" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#C9956A" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Warm sand circle background -->
+  <circle cx="160" cy="158" r="148" fill="url(#bg-glow)"/>
+
+  <!-- Subtle ambient glow around the figures -->
+  <circle cx="160" cy="140" r="90" fill="url(#orb-glow)"/>
+
+  <!-- ── Girl — stylized side profile silhouette ─────────────── -->
+  <g id="girl" filter="url(#soft-shadow)">
+    <!-- Hair — flowing shape -->
+    <path d="
+      M 108 68
+      C 96 72 86 86 84 102
+      C 82 116 82 126 82 126
+      C 80 118 78 106 82 96
+      C 84 88 92 76 108 68
+      Z
+    " fill="url(#girl-fill)"/>
+
+    <!-- Head -->
+    <ellipse cx="98" cy="100" rx="17" ry="19" fill="url(#girl-fill)"/>
+
+    <!-- Hair flowing back -->
+    <path d="
+      M 114 84
+      C 122 76 134 68 148 70
+      C 158 71 164 80 162 88
+      C 160 96 152 100 148 96
+      C 140 91 128 88 116 92
+    " fill="url(#girl-fill)"/>
+
+    <!-- Neck -->
+    <rect x="93" y="117" width="12" height="18" rx="4" fill="url(#girl-fill)"/>
+
+    <!-- Body / dress — flowing A-line silhouette -->
+    <path d="
+      M 84 136
+      C 86 130 96 126 99 126
+      L 104 136
+      L 118 230
+      L 78 230
+      L 84 136
+      Z
+    " fill="url(#girl-fill)"/>
+
+    <!-- Left arm — reaching toward dog (warm gesture) -->
+    <path d="
+      M 84 140
+      C 76 148 62 160 54 168
+      C 50 173 52 178 58 176
+      C 70 172 82 162 88 154
+    " fill="url(#girl-fill)" stroke="#1A0E06" stroke-width="1" stroke-linejoin="round"/>
+
+    <!-- Right arm — relaxed at side -->
+    <path d="
+      M 104 140
+      C 114 146 120 154 122 162
+      C 124 168 122 172 118 170
+      C 114 166 108 160 100 152
+    " fill="url(#girl-fill)"/>
+
+    <!-- Legs -->
+    <path d="
+      M 84 228
+      C 80 236 76 244 80 250
+      L 94 250
+      C 92 244 90 236 94 230
+    " fill="url(#girl-fill)"/>
+    <path d="
+      M 102 228
+      C 100 236 102 244 108 250
+      L 116 250
+      C 112 244 108 236 104 228
+    " fill="url(#girl-fill)"/>
+  </g>
+
+  <!-- ── Dog — stylized silhouette, amber accent ─────────────── -->
+  <g id="dog" filter="url(#soft-shadow)">
+    <!-- Body -->
+    <ellipse cx="192" cy="212" rx="36" ry="22" fill="url(#dog-fill)"/>
+
+    <!-- Neck connecting to body -->
+    <path d="
+      M 164 206
+      C 170 198 178 194 188 194
+      C 194 194 198 200 196 206
+      C 192 210 178 212 168 210
+    " fill="url(#dog-fill)"/>
+
+    <!-- Head -->
+    <ellipse cx="152" cy="198" rx="22" ry="17" fill="url(#dog-fill)"/>
+
+    <!-- Snout -->
+    <ellipse cx="132" cy="202" rx="12" ry="8" fill="url(#dog-fill)"/>
+
+    <!-- Ear — floppy, friendly -->
+    <path d="
+      M 160 186
+      C 164 178 172 176 178 180
+      C 176 186 170 190 164 192
+    " fill="url(#dog-fill)" opacity="0.88"/>
+
+    <!-- Tail — curved upward, happy wag -->
+    <path d="
+      M 224 204
+      C 232 196 240 192 246 196
+      C 242 204 234 208 226 210
+    " fill="url(#dog-fill)"/>
+
+    <!-- Legs — four simple shapes -->
+    <rect x="170" y="226" width="9" height="24" rx="4" fill="url(#dog-fill)"/>
+    <rect x="186" y="226" width="9" height="24" rx="4" fill="url(#dog-fill)"/>
+    <rect x="204" y="226" width="9" height="20" rx="4" fill="url(#dog-fill)"/>
+    <rect x="218" y="226" width="9" height="20" rx="4" fill="url(#dog-fill)"/>
+
+    <!-- Eye — small warm dot -->
+    <circle cx="144" cy="196" r="3" fill="#F2EBE0" opacity="0.9"/>
+  </g>
+
+  <!-- ── Connection line — subtle path between girl and dog ─── -->
+  <path d="
+    M 82 162
+    C 70 174 64 190 80 198
+    C 96 206 116 208 136 204
+  " fill="none" stroke="#C9956A" stroke-width="1.5" stroke-dasharray="3 3" opacity="0.55"/>
+
+  <!-- ── Floating amber accent dots — warmth particles ─────── -->
+  <circle cx="240" cy="88" r="4" fill="#C9956A" opacity="0.45"/>
+  <circle cx="256" cy="108" r="3" fill="#C9956A" opacity="0.32"/>
+  <circle cx="74" cy="240" r="3.5" fill="#C9956A" opacity="0.38"/>
+  <circle cx="250" cy="240" r="2.5" fill="#C9956A" opacity="0.28"/>
+  <circle cx="268" cy="148" r="3" fill="#C9956A" opacity="0.22"/>
+  <circle cx="52" cy="172" r="2.5" fill="#C9956A" opacity="0.25"/>
+
+  <!-- ── Small decorative star/sparkle ─────────────────────── -->
+  <g transform="translate(268, 72)" opacity="0.5">
+    <line x1="0" y1="-6" x2="0" y2="6" stroke="#C9956A" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="-6" y1="0" x2="6" y2="0" stroke="#C9956A" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="-4" y1="-4" x2="4" y2="4" stroke="#C9956A" stroke-width="1" stroke-linecap="round"/>
+    <line x1="4" y1="-4" x2="-4" y2="4" stroke="#C9956A" stroke-width="1" stroke-linecap="round"/>
+  </g>
+
+  <!-- ── "Project" smaller label ──────────────────────────────── -->
+  <text x="160" y="285"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="11"
+        font-weight="400"
+        letter-spacing="6"
+        fill="#A08060"
+        text-anchor="middle">PROJECT</text>
+
+  <!-- ── "MOKA" main wordmark ────────────────────────────────── -->
+  <text x="160" y="312"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="30"
+        font-weight="600"
+        letter-spacing="10"
+        fill="url(#text-grad)"
+        text-anchor="middle">MOKA</text>
+</svg>

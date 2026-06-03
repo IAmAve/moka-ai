@@ -1,6 +1,6 @@
-"""Tests for frontend/static/js/app.js"""
+"""Tests for frontend/static/js/app.js — Phase 13 rewrite"""
 import unittest
-import sys, os, re
+import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -17,73 +17,95 @@ class TestAppJs(unittest.TestCase):
         self.assertTrue(os.path.exists(self.js_path))
 
     def test_socket_io_connection(self):
-        self.assertIn("io(", self.content)
-        self.assertIn('socket.on("connect"', self.content)
-
-    def test_agent_state_handler(self):
-        self.assertIn('socket.on("agent_state"', self.content)
-
-    def test_agent_event_handler(self):
-        self.assertIn('socket.on("agent_event"', self.content)
-
-    def test_panel_switching_function(self):
-        self.assertIn("function switchPanel", self.content)
-        self.assertIn("panel.classList.add", self.content)
-
-    def test_orb_renderer_integration(self):
-        self.assertIn("createOrbRenderer", self.content)
-        self.assertIn("orbVoice.setState", self.content)
-
-    def test_transcript_line_handler(self):
-        self.assertIn("function appendTranscript", self.content)
-        self.assertIn('transcript-line', self.content)
-
-    def test_mic_toggle_event(self):
-        self.assertIn('socket.emit("mic_start")', self.content)
-        self.assertIn('socket.emit("mic_stop")', self.content)
-
-    def test_clear_history_handler(self):
-        self.assertIn('socket.emit("clear_history")', self.content)
-
-    def test_export_memory_handler(self):
-        self.assertIn('socket.emit("export_memory")', self.content)
-
-    def test_resource_bars_update(self):
-        self.assertIn("renderResources", self.content)
-        self.assertIn("gpu-bar", self.content)
-
-    def test_learning_metrics_update(self):
-        self.assertIn("renderLearning", self.content)
-
-    def test_event_log_update(self):
-        self.assertIn("renderHistory", self.content)
-
-    def test_initorb_on_dom_ready(self):
-        self.assertIn("DOMContentLoaded", self.content)
-        self.assertIn("initOrbVoice", self.content)
-
-    def test_skill_list_update(self):
-        self.assertIn("renderSkills", self.content)
-
-    def test_task_list_update(self):
-        self.assertIn("renderTasks", self.content)
-
-    def test_memory_panels_update(self):
-        self.assertIn("renderMemory", self.content)
-
-    def test_conversation_list_update(self):
-        self.assertIn("updateConversationList", self.content)
+        self.assertIn("io({", self.content)
+        self.assertIn("socket.on('connect'", self.content)
+        self.assertIn("socket.on('disconnect'", self.content)
 
     def test_socketio_event_types_wired(self):
-        for evt_type in ["resource_update", "learning_update", "history_events", "skill_update", "task_update", "memory_update", "conversation_list"]:
-            self.assertIn(f'"{evt_type}"', self.content, f"{evt_type} event type not wired")
+        """All Socket.IO event handlers from Phase 11 spec are present."""
+        events = [
+            "message",
+            "voice_transcript",
+            "orb_state",
+            "memory_update",
+            "skill_update",
+            "task_update",
+            "resource_update",
+            "learning_update",
+            "history_events",
+        ]
+        for evt_type in events:
+            search = "socket.on('" + evt_type + "'"
+            self.assertIn(search, self.content, f"{evt_type} handler not wired")
 
     def test_safe_text_defined(self):
         self.assertIn("function safeText", self.content)
 
     def test_safe_text_uses_dom_approach(self):
+        """XSS prevention via document.createElement + textContent."""
         self.assertIn("document.createElement", self.content)
         self.assertIn("textContent", self.content)
+
+    def test_panel_switching(self):
+        self.assertIn("function switchPanel", self.content)
+        self.assertIn("classList.remove('active')", self.content)
+        self.assertIn("classList.add('active')", self.content)
+
+    def test_orb_renderer_factory(self):
+        """app.js uses createOrbRenderer factory from orb.js."""
+        self.assertIn("createOrbRenderer", self.content)
+
+    def test_setOrbVoiceState(self):
+        """State normalization for uppercase→lowercase orb states."""
+        self.assertIn("setOrbVoiceState", self.content)
+
+    def test_chat_functions(self):
+        self.assertIn("function renderMessages", self.content)
+        self.assertIn("function sendChat", self.content)
+        # socket.emit('message', ...) — single quotes in JS
+        self.assertIn("socket.emit('message'", self.content)
+
+    def test_voice_functions(self):
+        self.assertIn("function appendTranscript", self.content)
+        self.assertIn("socket.emit('mic_start')", self.content)
+        self.assertIn("socket.emit('mic_stop')", self.content)
+
+    def test_history_functions(self):
+        self.assertIn("function renderHistory", self.content)
+        self.assertIn("historyFilter", self.content)
+        self.assertIn("socket.emit('clear_history')", self.content)
+
+    def test_memory_functions(self):
+        self.assertIn("function renderMemory", self.content)
+
+    def test_skills_functions(self):
+        self.assertIn("function renderSkills", self.content)
+
+    def test_tasks_functions(self):
+        self.assertIn("function renderTasks", self.content)
+        self.assertIn("socket.emit('task_toggle'", self.content)
+
+    def test_resource_functions(self):
+        self.assertIn("function renderResources", self.content)
+        self.assertIn("gpu-pct", self.content)
+        self.assertIn("ram-pct", self.content)
+
+    def test_learning_functions(self):
+        self.assertIn("function renderLearning", self.content)
+        self.assertIn("metric-behaviors", self.content)
+        self.assertIn("metric-skills", self.content)
+        self.assertIn("metric-profiles", self.content)
+
+    def test_boot_dom_ready(self):
+        self.assertIn("DOMContentLoaded", self.content)
+        self.assertIn("switchPanel('chat')", self.content)
+
+    def test_typing_in_input_enter_key(self):
+        self.assertIn("e.key === 'Enter'", self.content)
+        self.assertIn("chat-input", self.content)
+
+    def test_export_memory_button(self):
+        self.assertIn("socket.emit('export_memory')", self.content)
 
 
 if __name__ == "__main__":

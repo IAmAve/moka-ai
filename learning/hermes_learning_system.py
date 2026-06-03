@@ -87,6 +87,20 @@ class HermesAdaptiveLearningSystem:
             self._log(f"Error drafting behavior: {e}")
             return None
 
+    def _get_current_confidence(self, pattern_id: str, pattern: BehaviorPattern) -> float:
+        """Recalculate confidence score based on the most recent data."""
+        # Try to use full data from pending behaviors if available
+        data = self._pending_behaviors.get(pattern_id)
+        if not data:
+            # Fallback to constructing a dict from the stored BehaviorPattern
+            data = {
+                "frequency": pattern.frequency,
+                "last_observed": pattern.last_observed.isoformat() if hasattr(pattern.last_observed, "isoformat") else pattern.last_observed,
+                "context_data": pattern.context_data,
+                "behavior_type": pattern.behavior_type
+            }
+        return self.confidence_system.calculate_confidence_score(data)
+
     def test_behavior(self, behavior_pattern: Dict[str, Any]) -> bool:
         """Step 4 — Test drafted behavior for safety and effectiveness."""
         try:
@@ -104,9 +118,11 @@ class HermesAdaptiveLearningSystem:
             if passed and is_safe:
                 existing = self.behavior_db.get_behavior_pattern(pattern_id)
                 if existing:
-                    existing.confidence_score = min(1.0, existing.confidence_score + 0.1)
+                    # Use dynamic confidence as base for the boost
+                    current_conf = self._get_current_confidence(pattern_id, existing)
+                    existing.confidence_score = min(1.0, current_conf + 0.1)
                     self.behavior_db.update_behavior_pattern(pattern_id, existing)
-                    self._log(f"Behavior '{pattern_id}' passed tests — confidence boosted")
+                    self._log(f"Behavior '{pattern_id}' passed tests — confidence boosted to {existing.confidence_score:.2f}")
 
             return passed and is_safe
         except Exception as e:
@@ -124,10 +140,13 @@ class HermesAdaptiveLearningSystem:
             if not pattern:
                 return False
 
-            if pattern.confidence_score < self.confidence_system.learning_threshold:
+            # Dynamic re-evaluation: Recalculate confidence at the moment of promotion
+            current_confidence = self._get_current_confidence(pattern_id, pattern)
+
+            if current_confidence < self.confidence_system.learning_threshold:
                 self._log(
-                    f"Behavior '{pattern_id}' rejected — confidence "
-                    f"{pattern.confidence_score:.2f} below threshold"
+                    f"Behavior '{pattern_id}' rejected — dynamic confidence "
+                    f"{current_confidence:.2f} below threshold"
                 )
                 return False
 
@@ -138,13 +157,13 @@ class HermesAdaptiveLearningSystem:
                 code=new_behavior.get("code", ""),
                 dependencies=new_behavior.get("dependencies", []),
                 is_approved=False,
-                confidence_score=pattern.confidence_score,
+                confidence_score=current_confidence,
                 usage_count=0,
             )
 
             self.skill_db.add_skill(skill)
             self._inactive_skills[skill.skill_id] = skill
-            self._log(f"Skill '{skill.skill_id}' created — awaiting approval")
+            self._log(f"Skill '{skill.skill_id}' created with confidence {current_confidence:.2f} — awaiting approval")
             self._notify_approval_handlers(skill.skill_id)
             self._update_dashboard()
             return True

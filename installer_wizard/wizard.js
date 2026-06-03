@@ -1,14 +1,14 @@
-// installer_wizard/wizard.js — Moka AI Installer Wizard JS (6-step)
+// installer_wizard/wizard.js — Moka AI Installer Wizard JS
 (function () {
   'use strict';
 
   // ===== Orb =====================================================
   const ORB = {
-    IDLE:      { phase: 0,    color: '#c9a96e', pulse: 1.0,  speed: 1.0  },
-    LISTENING: { phase: 0.15, color: '#c9a96e', pulse: 1.8,  speed: 1.4  },
-    THINKING:  { phase: 0.3,  color: '#8a6c3e', pulse: 0.6,  speed: 0.7  },
-    SPEAKING:  { phase: 0.5,  color: '#c9a96e', pulse: 2.2,  speed: 2.0  },
-    ERROR:     { phase: 0,    color: '#e05c5c', pulse: 1.0,  speed: 0.8  },
+    IDLE:      { phase: 0,    color: '#D9CFC4', pulse: 1.0,  speed: 1.0  },
+    LISTENING: { phase: 0.15, color: '#C9956A', pulse: 1.8,  speed: 1.4  },
+    THINKING:  { phase: 0.3,  color: '#B8845A', pulse: 0.6,  speed: 0.7  },
+    SPEAKING:  { phase: 0.5,  color: '#C9956A', pulse: 2.2,  speed: 2.0  },
+    ERROR:     { phase: 0,    color: '#7A4A3A', pulse: 1.0,  speed: 0.8  },
   };
 
   function createOrb(canvas, state) {
@@ -24,6 +24,7 @@
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // Ambient glow
       const glow = ctx.createRadialGradient(cx, cy, baseR * 0.3, cx, cy, baseR * 1.5);
       glow.addColorStop(0, cfg.color + '40');
       glow.addColorStop(1, cfg.color + '00');
@@ -32,6 +33,7 @@
       ctx.arc(cx, cy, baseR * 1.5, 0, Math.PI * 2);
       ctx.fill();
 
+      // Sphere shading
       const sphere = ctx.createRadialGradient(cx - baseR * 0.3, cy - baseR * 0.3, 0, cx, cy, baseR);
       sphere.addColorStop(0, '#ffffff60');
       sphere.addColorStop(0.45, cfg.color);
@@ -41,7 +43,8 @@
       ctx.arc(cx, cy, baseR * (0.82 + 0.14 * Math.sin(t * cfg.speed * cfg.pulse + cfg.phase)), 0, Math.PI * 2);
       ctx.fill();
 
-      if (state === 'SPEAKING' || state === 'LISTENING') {
+      // Ring waves for speaking
+      if (state === 'SPEAKING') {
         for (let i = 1; i <= 2; i++) {
           const r = baseR * (1.1 + 0.12 * i + 0.07 * Math.sin(t * 2.5 + i * 1.3));
           ctx.strokeStyle = cfg.color + Math.floor(70 - i * 22).toString(16);
@@ -64,50 +67,15 @@
     };
   }
 
-  // ===== API access =============================================
-  function getApi() {
-    if (window.pywebview && window.pywebview.api) {
-      const keys = Object.keys(window.pywebview.api);
-      if (keys.length > 0) {
-        return window.pywebview.api;
-      }
-    }
-    return null;
-  }
-
-  function waitForApi(maxMs) {
-    return new Promise((resolve, reject) => {
-      const t0 = Date.now();
-      function poll() {
-        const api = getApi();
-        if (api) { resolve(api); return; }
-        if (Date.now() - t0 > maxMs) { reject(new Error('API init timeout')); return; }
-        setTimeout(poll, 100);
-      }
-      poll();
-    });
-  }
-
   // ===== State ==================================================
+  const api = window.pywebview ? window.pywebview.api : null;
   let orb = null;
-  let orbDemo = null;
   let currentStep = 1;
-  let hwCardsRendered = false;
-  let modelsLoadedForVram = 0;
-  let installStarted = false;
-  let downloadStarted = false;
-  let demoOrbCanvas = null;
-  let apiConfig = {
-    localOnly: true,
-    openaiKey: '',
-    anthropicKey: '',
-    customEndpoint: '',
-    githubToken: '',
-  };
-  let voicePreviewUtterance = null;
 
   // ===== Navigation =============================================
   function showStep(n) {
+    // Update current step and UI
+
     currentStep = n;
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
     const el = document.getElementById('step-' + n);
@@ -121,57 +89,36 @@
 
     updateOrb(n);
 
-    if (n === 2) {
-      initStep2();
-      pollState();
-    } else if (n === 3) {
-      initStep3();
-      // Get vRAM directly from the state to avoid race with async poll
-      const api = getApi();
-      let vram = modelsLoadedForVram;
-      if (!vram && api) {
-        try {
-          const s = api.get_state();
-          vram = (s.hw_profile && parseFloat(s.hw_profile.vram_gb)) || 4;
-        } catch(e) { vram = 4; }
+    if (n === 4) startInstallPoll();
+
+    // Accessibility: move focus to first focusable element in the new step
+    if (el) {
+      const focusable = el.querySelector('button, a, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (focusable) focusable.focus();
+    }
+    // Sync hidden generic next button for screen readers
+    const nextBtn = document.getElementById('nextBtn');
+    if (nextBtn) {
+      const primary = el ? el.querySelector('button.btn-primary') : null;
+      if (primary) {
+        nextBtn.onclick = () => primary.click();
+      } else {
+        nextBtn.onclick = null;
       }
-      loadModels(vram || 4);
-    } else if (n === 4) {
-      initDownload();
-      initStep4();
-      startDownloadPoll();
-    } else if (n === 5) {
-      initStep5();
-      startInstallPoll();
-    } else if (n === 6) {
-      initStep6();
     }
   }
 
   function updateOrb(n) {
     if (!orb) return;
-    const map = { 1: 'IDLE', 2: 'THINKING', 3: 'IDLE', 4: 'SPEAKING', 5: 'SPEAKING', 6: 'IDLE' };
+    const map = { 1: 'IDLE', 2: 'THINKING', 3: 'IDLE', 4: 'SPEAKING', 5: 'SPEAKING' };
     orb.setState(map[n] || 'IDLE');
-  }
-
-  function updateDemoOrb(state) {
-    if (orbDemo) orbDemo.setState(state);
-    const indicator = document.getElementById('status-indicator');
-    const statusText = document.getElementById('status-text');
-    if (indicator) {
-      indicator.className = 'status-indicator ' + state.toLowerCase();
-    }
-    if (statusText) {
-      const labels = { IDLE: 'Ready to test', LISTENING: 'Listening...', THINKING: 'Thinking...', SPEAKING: 'Speaking...', ERROR: 'Error' };
-      statusText.textContent = labels[state] || 'Ready to test';
-    }
   }
 
   function escHtml(s) {
     return String(s).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
   }
 
-  // ===== Step 1: Path ===========================================
+  // ===== Step 1: Welcome ========================================
   function initWelcome() {
     const pathInput = document.getElementById('install-path');
     const browseBtn  = document.getElementById('btn-browse');
@@ -179,39 +126,25 @@
     const validation = document.getElementById('path-validation');
 
     browseBtn.addEventListener('click', async () => {
-      try {
-        const api = await waitForApi(3000);
-        if (!api) { alert('Error: pywebview API not available'); return; }
-        const path = await api.browse_folder();
-        if (path && !path.startsWith('[ERROR')) {
-          pathInput.value = path;
-          validatePath(path);
-        } else if (path) {
-          alert('Browse failed: ' + path);
-        }
-      } catch(e) {
-        alert('API connection error: ' + e.message);
+      if (!api) return;
+      const path = await api.browse_folder();
+      if (path) {
+        pathInput.value = path;
+        validatePath(path);
       }
     });
 
-    getStart.addEventListener('click', async function() {
+    pathInput.addEventListener('input', () => validatePath(pathInput.value));
+
+    getStart.addEventListener('click', async () => {
       const path = pathInput.value.trim();
       if (!path || getStart.disabled) return;
-      const api = getApi();
       if (api) {
-        const result = await api.set_install_path(path);
-        if (!result.valid) {
-          validation.textContent = result.error || 'Invalid path — please choose another directory';
-          validation.className = 'path-validation invalid';
-          getStart.disabled = true;
-          return;
-        }
-        pathInput.value = result.path;  // update with normalized path
-        api.scan_hardware().catch(function() {});
-        showStep(2);
-      } else {
-        showStep(2);
+        await api.set_install_path(path);
+        await api.scan_hardware();
       }
+      showStep(2);
+      // Auto-resume will handle rendering hw cards via polling
     });
   }
 
@@ -224,29 +157,21 @@
       getStart.disabled      = true;
       return;
     }
-    const valid = /^[A-Za-z]:/.test(path) || path.startsWith('/');
-    validation.textContent = valid ? 'Ready to continue' : 'Enter a valid path';
+    const valid = !path.includes('\x00') && /^[A-Za-z]:/.test(path) || path.startsWith('/');
+    validation.textContent = valid ? 'Path looks good' : 'Enter a valid path';
     validation.className   = 'path-validation ' + (valid ? 'valid' : 'invalid');
     getStart.disabled      = !valid;
   }
 
   // ===== Step 2: Hardware =======================================
   async function pollState() {
-    if (currentStep !== 2) return;
-    const api = getApi();
-    if (!api) { setTimeout(pollState, 500); return; }
+    if (!api) return;
     try {
-      const s = await api.get_state();
-      if (!hwCardsRendered && s.hw_profile && s.hw_profile.cpu && s.hw_profile.gpu) {
-        renderHwCards(s.hw_profile);
-        hwCardsRendered = true;
-      }
-      const continueBtn = document.getElementById('btn-continue-hw');
-      if (continueBtn && s.hw_profile && s.hw_profile.cpu) {
-        continueBtn.disabled = false;
+      const state = await api.get_state();
+      if (state.step === 2 && state.step_name === 'hardware') {
+        renderHwCards(state.hw_profile || {});
       }
     } catch (e) { /* ignore */ }
-    if (currentStep === 2) setTimeout(pollState, 500);
   }
 
   function renderHwCards(hw) {
@@ -254,14 +179,12 @@
     const scanHint = document.getElementById('scan-hint');
     if (scanHint) scanHint.style.display = 'none';
 
-    const SIPHON = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">';
-
     const items = [
-      { icon: SIPHON + '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>', label: 'Processor',    value: hw.cpu || 'Detecting…',   cls: '' },
-      { icon: SIPHON + '<rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="14"/><line x1="10" y1="10" x2="10" y2="14"/><line x1="14" y1="10" x2="14" y2="14"/><circle cx="17" cy="12" r="1"/><line x1="7" y1="18" x2="7" y2="21"/><line x1="17" y1="18" x2="17" y2="21"/></svg>', label: 'Graphics',     value: hw.gpu || 'Detecting…',   cls: hw.gpu && hw.gpu.toLowerCase().includes('nvidia') ? 'amber' : '' },
-      { icon: SIPHON + '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>', label: 'VRAM',         value: hw.vram_gb ? hw.vram_gb + ' GB available' : 'Detecting…', showBar: true, vramPct: hw.vram_pct || 0 },
-      { icon: SIPHON + '<path d="M6 19v-3"/><path d="M10 19v-6"/><path d="M14 19v-9"/><path d="M18 19v-12"/><rect x="2" y="5" width="20" height="14" rx="2"/></svg>', label: 'Memory',        value: hw.ram || 'Detecting…',   cls: '' },
-      { icon: SIPHON + '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>', label: 'OS',            value: hw.os || 'Detecting…',     cls: '' },
+      { icon: '&#128187;', label: 'Processor',    value: hw.cpu_model || 'Detecting…',  cls: ''  },
+      { icon: '&#127918;', label: 'Graphics',     value: hw.gpu_model || 'Detecting…', cls: hw.gpu_model && hw.gpu_model.toLowerCase().includes('nvidia') ? 'amber' : '' },
+      { icon: '&#129504;', label: 'VRAM',          value: hw.vram_gb ? `${hw.vram_gb} GB available` : 'Detecting…', showBar: true, vramPct: hw.vram_pct || 0 },
+      { icon: '&#128203;', label: 'Memory',        value: hw.ram || 'Detecting…',        cls: ''  },
+      { icon: '&#128421;', label: 'OS',           value: hw.os || 'Detecting…',         cls: ''  },
     ];
 
     cards.innerHTML = items.map(item => `
@@ -275,400 +198,99 @@
       </div>
     `).join('');
 
+    // Stagger animation
     cards.querySelectorAll('.hw-card').forEach((card, i) => {
       setTimeout(() => card.classList.add('visible'), i * 130);
     });
 
+    // Show rescan
     const rescan = document.getElementById('btn-rescan');
     if (rescan) rescan.classList.add('visible');
 
+    // Enable continue
     document.getElementById('btn-continue-hw').disabled = false;
-  }
+    document.getElementById('btn-continue-hw').addEventListener('click', () => {
+      const vram = hw.vram_gb || 4;
+      loadModels(vram);
+      showStep(3);
+    });
 
-  function initStep2() {
-    const continueBtn = document.getElementById('btn-continue-hw');
-    if (continueBtn && !continueBtn.dataset.ls) {
-      continueBtn.dataset.ls = '1';
-      continueBtn.addEventListener('click', async () => {
-        const api = getApi();
-        if (api) {
-          try {
-            const s = await api.get_state();
-            if (s?.hw_profile?.vram_gb) {
-              modelsLoadedForVram = parseFloat(s.hw_profile.vram_gb) || 4;
-            }
-          } catch(e) {}
-        }
-        showStep(3);
-      });
-    }
-
-    const backBtn = document.getElementById('btn-back-hw');
-    if (backBtn) {
-      backBtn.addEventListener('click', () => showStep(1));
-    }
-
-    const rescan = document.getElementById('btn-rescan');
+    // Rescan handler
     if (rescan) {
       rescan.addEventListener('click', async () => {
         rescan.textContent = 'Scanning…';
-        const api = getApi();
         if (api) await api.scan_hardware();
         rescan.textContent = 'Rescan';
       });
     }
   }
 
-  // ===== Step 3: Models + Voice =================================
+  // ===== Step 3: Models =========================================
   async function loadModels(vram_gb) {
-    let api;
-    try {
-      api = await waitForApi(5000);
-    } catch(e) {
-      console.error('loadModels: API not available', e);
-      return;
-    }
     if (!api) return;
-
-    const baseSel  = document.getElementById('model-base');
-    const imageSel = document.getElementById('model-image');
-    if (!baseSel || !imageSel) return;
-
-    // Show loading state while HF search runs
-    baseSel.innerHTML  = '<option value="">Searching HuggingFace…</option>';
-    imageSel.innerHTML = '<option value="">Searching HuggingFace…</option>';
-    baseSel.disabled  = true;
-    imageSel.disabled = true;
-
     try {
-      const vram = vram_gb || modelsLoadedForVram || 4;
-      const models = await api.get_huggingface_models_all(vram);
+      const models = await api.get_models(vram_gb || 4);
+      const baseSel  = document.getElementById('model-base');
+      const imageSel = document.getElementById('model-image');
+      const voiceSel = document.getElementById('model-voice');
 
-      baseSel.disabled  = false;
-      imageSel.disabled = false;
+      fillSelect(baseSel,  models.base  || [], 'base');
+      fillSelect(imageSel, models.image || [], 'image');
+      fillSelect(voiceSel, models.voice || [], 'voice');
 
-      const baseModels  = models.filter(m => m.type === 'base');
-      const imageModels = models.filter(m => m.type === 'image');
+      document.getElementById('vram-badge').textContent = `Recommended for ${vram_gb} GB VRAM`;
 
-      fillSelect(baseSel,  baseModels,  'base');
-      fillSelect(imageSel, imageModels, 'image');
+      // Size pills on change
+      baseSel.addEventListener('change',  () => updateSizePillBySelect(baseSel,  'base'));
+      imageSel.addEventListener('change', () => updateSizePillBySelect(imageSel, 'image'));
+      voiceSel.addEventListener('change', () => updateSizePillBySelect(voiceSel, 'voice'));
 
-      document.getElementById('vram-badge').textContent = `Recommended for ${vram} GB VRAM`;
-
-      baseSel.addEventListener('change',  () => { updateSizePillBySelect(baseSel); });
-      imageSel.addEventListener('change', () => { updateSizePillBySelect(imageSel); });
-
-      updateSizePillBySelect(baseSel);
-      updateSizePillBySelect(imageSel);
-    } catch(e) {
-      console.error('loadModels HF error', e);
-      // Fallback: show placeholder
-      if (baseSel)  { baseSel.innerHTML  = '<option value="">Search failed — check internet</option>';  baseSel.disabled  = false; }
-      if (imageSel) { imageSel.innerHTML = '<option value="">Search failed — check internet</option>'; imageSel.disabled = false; }
-    }
+      // Init pills
+      updateSizePillBySelect(baseSel,  'base');
+      updateSizePillBySelect(imageSel, 'image');
+      updateSizePillBySelect(voiceSel, 'voice');
+    } catch (e) { console.error('loadModels', e); }
   }
 
   function fillSelect(select, options, type) {
-    // Options are already formatted as {value, label, size_gb, compatible, ...}
-    if (!options || !options.length) {
-      select.innerHTML = '<option value="">No models found — check internet</option>';
-      return;
-    }
-    // Auto-select the first compatible model as default
-    let defaultIdx = 0;
-    for (let i = 0; i < options.length; i++) {
-      if (options[i].compatible) { defaultIdx = i; break; }
-    }
-    select.innerHTML = options.map((m, i) =>
-      `<option value="${escHtml(m.value)}"
-               data-size="${m.size_gb || 0}"
-               data-repo="${escHtml(m.repo_id || '')}"
-               data-file="${escHtml(m.gguf_file || '')}"
-               data-type="${m.type || type}"
-               data-compatible="${m.compatible ? '1' : ''}"
-               data-display="${escHtml(m.label || m.value || '')}">${escHtml(m.label || m.value)}${m.compatible ? ' ★' : ''}</option>`
-    ).join('');
-    select.selectedIndex = defaultIdx;
+    select.innerHTML = options.map(m => `<option value="${escHtml(m.name)}">${escHtml(m.name)}</option>`).join('');
+    if (!select.value && options.length) select.selectedIndex = 0;
   }
 
-  function updateSizePillBySelect(select) {
+  function updateSizePillBySelect(select, type) {
     const model = select.options[select.selectedIndex];
-    const pill  = document.getElementById('size-' + select.id.replace('model-', ''));
+    const pill  = document.getElementById('size-' + type);
     if (!model || !pill) return;
-    const size = parseFloat(model.dataset.size || 0);
-    const compat = model.dataset.compatible === '1';
-    pill.textContent = size > 0 ? `~${size.toFixed(1)} GB` : '—';
-    pill.className = 'size-pill' + (compat ? ' s' : '');
+    const text = model.textContent;
+    const tier = model.dataset.tier || 'medium';
+    const size  = model.dataset.size || '—';
+    pill.textContent = size;
+    pill.className   = 'size-pill ' + (tier === 'large' ? 'large' : tier === 'medium' ? 'medium' : 'small');
   }
-
-  function updateTotalSize() {
-    const base  = document.getElementById('model-base');
-    const image = document.getElementById('model-image');
-    const el    = document.getElementById('total-size');
-    if (!el) return;
-
-    let total = 0;
-    [base, image].forEach(sel => {
-      if (sel && sel.selectedIndex >= 0) {
-        total += parseFloat(sel.options[sel.selectedIndex].dataset.size || 0);
-      }
-    });
-
-    if (total > 0) {
-      el.textContent = `Total: ~${total.toFixed(1)} GB`;
-    } else {
-      el.textContent = '';
-    }
-  }
-
-  // Voice is bundled — no user selection needed
 
   function initStep3() {
-    const localOnlyChk = document.getElementById('chk-local-only');
-    const grpOpenAI    = document.getElementById('grp-openai');
-    const grpAnthropic = document.getElementById('grp-anthropic');
-
-    function updateApiFieldVisibility() {
-      const hide = localOnlyChk && localOnlyChk.checked;
-      if (grpOpenAI)    grpOpenAI.style.display    = hide ? 'none' : '';
-      if (grpAnthropic) grpAnthropic.style.display = hide ? 'none' : '';
-    }
-
-    if (localOnlyChk) {
-      localOnlyChk.addEventListener('change', updateApiFieldVisibility);
-      updateApiFieldVisibility();
-    }
-
-    // ── Back + Proceed buttons ──────────────────────────
-    const backBtn = document.getElementById('btn-back-models');
-    if (backBtn) backBtn.addEventListener('click', () => showStep(2));
-
-    document.getElementById('btn-proceed-download').addEventListener('click', async function() {
-      // ── Checkpoint: both models must be selected ─────────
-      const baseSel  = document.getElementById('model-base');
-      const imageSel = document.getElementById('model-image');
-      if (!baseSel || !baseSel.value) {
-        alert('Please select a Coding & Reasoning model to continue.');
-        return;
-      }
-      if (!imageSel || !imageSel.value) {
-        alert('Please select an Image Generation model to continue.');
-        return;
-      }
-
-      const api = getApi();
-      if (!api) { showStep(4); return; }
-
-      apiConfig.githubToken    = (document.getElementById('input-github-token')   || {}).value || '';
-      apiConfig.localOnly      = localOnlyChk ? localOnlyChk.checked : true;
-      apiConfig.openaiKey     = (document.getElementById('input-openai-key')      || {}).value || '';
-      apiConfig.anthropicKey  = (document.getElementById('input-anthropic-key')   || {}).value || '';
-      apiConfig.customEndpoint = (document.getElementById('input-custom-endpoint') || {}).value || '';
-
-      try {
-        await api.set_api_config(
-          apiConfig.openaiKey,
-          apiConfig.anthropicKey,
-          apiConfig.customEndpoint,
-          apiConfig.localOnly,
-          apiConfig.githubToken || "",
-        );
-
-        // HF model selection — read data attributes from the selected option
-        const baseOpt  = baseSel.selectedOptions[0];
-        const imageOpt = imageSel.selectedOptions[0];
-        const baseDisplay  = baseOpt?.dataset?.display  || baseSel.value;
-        const imageDisplay = imageOpt?.dataset?.display || imageSel.value;
-
-        // Base model — set via set_huggingface_model
-        await api.set_huggingface_model(
-          baseSel.value,                         // repo_id
-          baseOpt?.dataset?.file || '',           // gguf_file
-          baseDisplay,
-        );
-
-        // Image model — set via set_huggingface_image_model (separate state fields)
-        await api.set_huggingface_image_model(
-          imageSel.value,
-          imageOpt?.dataset?.file || '',
-          imageDisplay,
-        );
-
-        showStep(4);
-      } catch(e) {
-        console.error('Proceed failed:', e);
-        showStep(4);  // still advance so user isn't stuck
-      }
+    document.getElementById('btn-install').addEventListener('click', async () => {
+      if (!api) return;
+      await api.set_models(
+        document.getElementById('model-base').value,
+        document.getElementById('model-image').value,
+        document.getElementById('model-voice').value
+      );
+      await api.start_install();
+      showStep(4);
     });
+    document.getElementById('btn-back-models').addEventListener('click', () => showStep(2));
   }
 
-  // ===== Step 4: Downloading ====================================
-  // Called by showStep(4) — starts the download via API, then polls
-  function initDownload() {
-    if (downloadStarted) return;  // guard: only start once per visit
-    downloadStarted = true;
-
-    const api = getApi();
-    if (api) {
-      // Fire-and-forget: backend downloads, JS polls for completion
-      api.start_download().catch(() => {
-        // fallback: simulate if API call fails
-        startSimulatedDownload();
-      });
-    } else {
-      startSimulatedDownload();
-    }
-  }
-
-  function startSimulatedDownload() {
-    const items = [
-      { id: 'python',      total: 80   },
-      { id: 'model-base',  total: 4000 },
-      { id: 'model-image', total: 3000 },
-      { id: 'deps',        total: 500  },
-    ];
-
-    let doneCount = 0;
-    let totalBytes = items.reduce(function(a, i) { return a + i.total; }, 0);
-    let downloadedBytesArr = items.map(function() { return 0; });
-
-    items.forEach(function(item, idx) {
-      let progress = 0;
-
-      const timer = setInterval(function() {
-        if (currentStep !== 4) { clearInterval(timer); return; }
-        progress += 0.12 + Math.random() * 0.15;
-        if (progress >= 1) {
-          progress = 1;
-          clearInterval(timer);
-          doneCount++;
-          downloadedBytesArr[idx] = item.total;
-          setDlStatus(item.id, 'done', 100);
-          checkDownloadComplete(doneCount, items.length);
-        } else {
-          downloadedBytesArr[idx] = Math.floor(item.total * progress);
-          setDlStatus(item.id, 'downloading', Math.round(progress * 100));
-        }
-
-        var totalDownloaded = 0;
-        for (var j = 0; j < items.length; j++) {
-          totalDownloaded += downloadedBytesArr[j] || 0;
-        }
-        updateDownloadSummary(totalDownloaded, totalBytes);
-      }, 80);
-    });
-  }
-
-  function startDownloadPoll() {
-    (function poll() {
-      if (currentStep !== 4) return;
-      const api = getApi();
-      if (!api) { setTimeout(poll, 500); return; }
-      api.get_state().then(s => {
-        if (s.download_items) {
-          updateDownloadUI(s.download_items);
-        }
-        // Backend transitions from DOWNLOAD(4) → INSTALLING(5) when done
-        if (s.step >= 5) {
-          setDlAllDone();
-          showStep(5);  // auto-advance
-        } else {
-          setTimeout(poll, 500);
-        }
-      }).catch(() => setTimeout(poll, 500));
-    })();
-  }
-
-  function setDlAllDone() {
-    ['python','model-base','model-image','deps'].forEach(id => {
-      const bar = document.getElementById('dl-' + id + '-bar');
-      const statusEl = document.getElementById('dl-' + id + '-status');
-      if (bar) bar.style.width = '100%';
-      if (statusEl) { statusEl.textContent = 'Complete'; statusEl.className = 'dl-status done'; }
-    });
-    const btn = document.getElementById('btn-continue-download');
-    if (btn) btn.disabled = false;
-  }
-
-  function updateDownloadUI(items) {
-    if (!items) return;
-    let totalDone = 0, totalSize = 0;
-    items.forEach(item => {
-      const pct = Math.round((item.downloaded || 0) / (item.total || 1) * 100);
-      const bar = document.getElementById('dl-' + item.id + '-bar');
-      const status = document.getElementById('dl-' + item.id + '-status');
-      if (bar) bar.style.width = pct + '%';
-      if (status) {
-        status.textContent = item.status === 'done' ? 'Complete' : item.status === 'downloading' ? pct + '%' : 'Waiting...';
-        status.className = 'dl-status ' + (item.status || '');
-      }
-      totalDone += item.downloaded || 0;
-      totalSize += item.total || 0;
-    });
-    updateDownloadSummary(totalDone, totalSize);
-  }
-
-  function setDlStatus(id, status, pct) {
-    const bar = document.getElementById('dl-' + id + '-bar');
-    const statusEl = document.getElementById('dl-' + id + '-status');
-    const sizeEl = document.getElementById('dl-' + id + '-size');
-    if (bar) bar.style.width = pct + '%';
-    if (statusEl) {
-      statusEl.textContent = status === 'done' ? 'Complete' : pct + '%';
-      statusEl.className = 'dl-status ' + status;
-    }
-  }
-
-  function updateDownloadSummary(done, total) {
-    const el = document.getElementById('dl-total-progress');
-    if (el) {
-      const fmt = b => b >= 1000 ? (b / 1000).toFixed(1) + ' GB' : b + ' MB';
-      el.textContent = `${fmt(done)} / ${fmt(total)} downloaded`;
-    }
-  }
-
-  function checkDownloadComplete(done, total) {
-    const btn = document.getElementById('btn-continue-download');
-    if (done >= total && btn) {
-      btn.disabled = false;
-    }
-  }
-
-  function initStep4() {
-    const continueBtn = document.getElementById('btn-continue-download');
-    if (continueBtn) {
-      continueBtn.addEventListener('click', () => {
-        if (installStarted) return;
-        installStarted = true;
-        const api = getApi();
-        if (api) {
-          try { api.start_install(); } catch(e) { console.error(e); }
-        }
-        showStep(5);
-      });
-    }
-
-    const cancelBtn = document.getElementById('btn-cancel-download');
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => {
-        if (confirm('Cancel the download and return to model selection?')) {
-          downloadStarted = false;
-          showStep(3);
-        }
-      });
-    }
-  }
-
-  // ===== Step 5: Installing =====================================
+  // ===== Step 4: Installing ======================================
   function startInstallPoll() {
     (function poll() {
-      if (currentStep !== 5) return;
-      const api = getApi();
+      if (currentStep !== 4) return;
       if (!api) { setTimeout(poll, 500); return; }
       api.get_state().then(s => {
         updateInstallUI(s);
-        if (s.step >= 6) {           // COMPLETE = 6
-          setTimeout(() => showStep(6), 800);
+        if (s.step_name === 'complete') {
+          showStep(5);
         } else {
           setTimeout(poll, 300);
         }
@@ -684,13 +306,14 @@
 
     if (fill)   fill.style.width   = pct + '%';
     if (pctEl)  pctEl.textContent  = pct + '%';
-    if (statusEl && s.log && s.log.length) {
-      const last = s.log[s.log.length - 1];
+    if (statusEl && s.install_log && s.install_log.length) {
+      const last = s.install_log[s.install_log.length - 1];
       if (last.includes('INSTALL COMPLETE'))  statusEl.textContent = 'All done!';
       else if (last.includes('FATAL') || last.includes('ERROR')) statusEl.textContent = 'Error occurred';
       else statusEl.textContent = last;
     }
 
+    // Package list
     if (s.packages) {
       const pkgList = document.getElementById('pkg-list');
       if (pkgList) {
@@ -706,203 +329,52 @@
       }
     }
 
-    if (s.log) {
+    // Log pane
+    if (s.install_log) {
       const logPane = document.getElementById('log-pane');
       if (logPane) {
-        logPane.innerHTML = s.log.map(l =>
-          `<div class="log-line">${escHtml(l)}</div>`
+        logPane.innerHTML = s.install_log.map(l =>
+          `<div class="log-line ${l.includes('FATAL') || l.includes('ERROR') && !l.includes('ERROR:') === false ? 'error' : ''}">${escHtml(l)}</div>`
         ).join('');
         logPane.scrollTop = logPane.scrollHeight;
       }
     }
   }
 
-  function initStep5() {
+  function initStep4() {
     const toggle = document.getElementById('btn-toggle-log');
     const logPane = document.getElementById('log-pane');
     if (toggle && logPane) {
       toggle.addEventListener('click', () => {
         const show = logPane.style.display === 'none';
         logPane.style.display = show ? 'block' : 'none';
-        toggle.innerHTML = show ? 'Hide log ▲' : 'Show log ▼';
-      });
-    }
-
-    const backBtn = document.getElementById('btn-back-install');
-    if (backBtn) {
-      backBtn.addEventListener('click', () => {
-        const inProgress = installStarted;
-        if (inProgress && !confirm('Installation in progress. Go back to download?')) return;
-        downloadStarted = false;
-        showStep(4);
+        toggle.innerHTML = show ? 'Hide log &#9650;' : 'Show log &#9660;';
       });
     }
   }
 
-  // ===== Step 6: Demo ===========================================
-  function initStep6() {
-    // Create demo orb
-    if (!orbDemo && demoOrbCanvas) {
-      orbDemo = createOrb(demoOrbCanvas, 'IDLE');
-    }
-    updateDemoOrb('IDLE');
-
-    const micBtn     = document.getElementById('btn-mic-test');
-    const speakerBtn = document.getElementById('btn-speaker-test');
-    const fixBtn     = document.getElementById('btn-self-fix');
-    const undoBtn    = document.getElementById('btn-undo-install');
-    const convEl     = document.getElementById('demo-conversation');
-    const finishBtn  = document.getElementById('btn-finish');
-
-    // Mic Test — real mic + Moka responds via Python TTS
-    if (micBtn) {
-      micBtn.addEventListener('click', async function() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          addDemoMessage(convEl, 'Microphone not available in this environment.', 'error');
-          return;
-        }
-        updateDemoOrb('LISTENING');
-        addDemoMessage(convEl, 'Listening...', 'user');
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          stream.getTracks().forEach(function(t) { t.stop(); });
-          updateDemoOrb('SPEAKING');
-          addDemoMessage(convEl, 'Mic working! Moka is responding...', 'moka');
-          const api = getApi();
-          const responses = [
-            'Hello, I am Moka. Your voice assistant is fully operational.',
-            'Great, your microphone is working perfectly. How can I help you today?',
-            'I hear you clearly. What would you like to do?',
-          ];
-          const response = responses[Math.floor(Math.random() * responses.length)];
-          if (api && api.speak_text) {
-            await api.speak_text(response);
-          }
-          addDemoMessage(convEl, response, 'moka');
-          setTimeout(function() { updateDemoOrb('IDLE'); }, 3000);
-        } catch(e) {
-          updateDemoOrb('ERROR');
-          addDemoMessage(convEl, 'Microphone access denied or unavailable.', 'error');
-          setTimeout(function() { updateDemoOrb('IDLE'); }, 3000);
-        }
-      });
-    }
-
-    // Speaker Test — use Python TTS
-    if (speakerBtn) {
-      speakerBtn.addEventListener('click', async function() {
-        updateDemoOrb('SPEAKING');
-        const api = getApi();
-        const text = 'Hello, I am Moka. Your speaker test was successful.';
-        try {
-          if (api && api.speak_text) {
-            await api.speak_text(text);
-          }
-          addDemoMessage(convEl, 'Moka spoke successfully via the installed TTS engine.', 'moka');
-        } catch(e) {
-          addDemoMessage(convEl, 'Speaker test had an issue: ' + e.message, 'error');
-        }
-        setTimeout(function() { updateDemoOrb('IDLE'); }, 2000);
-      });
-    }
-
-    // Self-Fix — run Python diagnostics
-    if (fixBtn) {
-      fixBtn.addEventListener('click', async function() {
-        updateDemoOrb('THINKING');
-        addDemoMessage(convEl, 'Running self-diagnostics...', 'moka');
-        const api = getApi();
-        try {
-          if (api && api.run_self_diagnostics) {
-            const report = await api.run_self_diagnostics();
-            (report.log || []).forEach(function(line) { addDemoMessage(convEl, line, 'moka'); });
-            addDemoMessage(convEl, report.ok ? 'All systems verified. Moka AI is healthy.' : 'Self-fix complete. Review any warnings above.', 'moka');
-          } else if (api && api.self_fix) {
-            await api.self_fix();
-            addDemoMessage(convEl, 'Self-fix complete. All components healthy.', 'moka');
-          } else {
-            addDemoMessage(convEl, 'Self-fix not available in this environment.', 'error');
-          }
-        } catch(e) {
-          addDemoMessage(convEl, 'Self-fix error: ' + e.message, 'error');
-        }
-        updateDemoOrb('IDLE');
-      });
-    }
-
-    // Undo — call Python uninstall
-    if (undoBtn) {
-      undoBtn.addEventListener('click', function() {
-        if (!confirm('This will remove Moka AI and all installed components. Continue?')) return;
-        const api = getApi();
-        if (api && api.undo_install) {
-          api.undo_install().then(function(result) {
-            if (result.ok) {
-              addDemoMessage(convEl, 'Moka AI removed successfully.', 'moka');
-              setTimeout(function() { window.close(); }, 2000);
-            } else {
-              addDemoMessage(convEl, 'Undo failed: ' + (result.error || 'Unknown error'), 'error');
-            }
-          }).catch(function(e) {
-            addDemoMessage(convEl, 'Undo error: ' + e.message, 'error');
-          });
-        } else {
-          window.close();
-        }
-      });
-    }
-
-    // Finish — create shortcuts, register uninstaller, then close
-    if (finishBtn) {
-      finishBtn.addEventListener('click', async function() {
-        finishBtn.disabled = true;
-        const desktop   = document.getElementById('chk-desktop').checked;
-        const startmenu = document.getElementById('chk-startmenu').checked;
-        const launch    = document.getElementById('chk-launch').checked;
-        const autoStart = document.getElementById('chk-autostart')?.checked || false;
-        const api = getApi();
-        if (api) {
-          try {
-            await api.set_auto_start(autoStart);
-            await api.create_shortcuts_and_launch(desktop, startmenu, launch, autoStart);
-            await api.register_uninstaller('1.0.0');
-          } catch(e) { /* continue to close */ }
-        }
-        setTimeout(function() {
-          const cApi = getApi();
-          if (cApi && cApi.close_window) cApi.close_window();
-          else if (window.close) window.close();
-        }, 1500);
-      });
-    }
+  // ===== Step 5: Complete =========================================
+  function initStep5() {
+    document.getElementById('btn-finish').addEventListener('click', async () => {
+      if (!api) { window.close(); return; }
+      await api.create_shortcuts_and_launch(
+        document.getElementById('chk-desktop').checked,
+        document.getElementById('chk-startmenu').checked,
+        document.getElementById('chk-launch').checked
+      );
+      window.close();
+    });
   }
 
-  // ===== Boot ==================================================
+  // ===== Boot ====================================================
   document.addEventListener('DOMContentLoaded', async () => {
+    // Orb on both canvases
     const mainCanvas = document.getElementById('orb');
-    if (mainCanvas) {
-      orb = createOrb(mainCanvas, 'IDLE');
-    }
+    const compCanvas  = document.getElementById('orb-complete');
+    if (mainCanvas) orb = createOrb(mainCanvas, 'IDLE');
+    else if (compCanvas) orb = createOrb(compCanvas, 'IDLE');
 
-    demoOrbCanvas = document.getElementById('orb-demo');
-
-    // --- Frameless window controls ---
-    document.getElementById('btn-minimize')?.addEventListener('click', async () => {
-      const api = await waitForApi(2000).catch(() => null);
-      if (api?.minimize_window) api.minimize_window();
-    });
-
-    document.getElementById('btn-maximize')?.addEventListener('click', async () => {
-      const api = await waitForApi(2000).catch(() => null);
-      if (api?.maximize_window) api.maximize_window();
-    });
-
-    document.getElementById('btn-close')?.addEventListener('click', async () => {
-      const api = await waitForApi(2000).catch(() => null);
-      if (api?.close_window) api.close_window();
-      else if (window.close) window.close();
-    });
-
+    // Step dot back-navigation
     document.querySelectorAll('.step-dot').forEach(dot => {
       dot.addEventListener('click', () => {
         const target = parseInt(dot.dataset.step, 10);
@@ -911,13 +383,11 @@
     });
 
     initWelcome();
-    initStep2();
     initStep3();
     initStep4();
     initStep5();
-    initStep6();
 
-    const api = getApi();
+    // Restore state
     if (api) {
       try {
         const s = await api.get_state();
@@ -926,28 +396,18 @@
           if (el) el.value = s.install_path;
         }
         if (s.step) showStep(s.step);
-        if (s.step === 4) startDownloadPoll();
-        if (s.step === 5) startInstallPoll();
+        if (s.step === 4) startInstallPoll();
       } catch (e) { showStep(1); }
     } else {
-      try {
-        const connectedApi = await waitForApi(5000);
-        const s = await connectedApi.get_state();
-        if (s.install_path) {
-          const el = document.getElementById('install-path');
-          if (el) el.value = s.install_path;
-        }
-        if (s.step) showStep(s.step);
-        if (s.step === 4) startDownloadPoll();
-        if (s.step === 5) startInstallPoll();
-      } catch(e) { showStep(1); }
+      showStep(1);
     }
   });
 
-  // Background state refresh
+  // Background state refresh every 5s (for hardware scan completion)
+  let pollTimer;
   (function startBgPoll() {
     pollState();
-    setTimeout(startBgPoll, 2000);
+    pollTimer = setTimeout(startBgPoll, 2000);
   })();
 
 })();

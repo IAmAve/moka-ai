@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img">
+  <title>MOKA</title>
+  <!-- Warm sand background -->
+  <rect width="32" height="32" rx="7" fill="#F2EBE0"/>
+  <!-- Amber circle orb glow -->
+  <circle cx="16" cy="16" r="14" fill="#C9956A" opacity="0.18"/>
+  <!-- Stylized "M" letterform as abstract girl+dog silhouette -->
+  <path d="M5 24 L5 13 C5 10 7 8 10 8 C12 8 13 9 14 11 L16 8 L18 11 C19 9 20 8 22 8 C25 8 27 10 27 13 L27 24"
+        fill="none"
+        stroke="#2C1A0E"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+  <!-- Amber accent dot on peak of M -->
+  <circle cx="16" cy="8.5" r="2" fill="#C9956A"/>
+</svg>

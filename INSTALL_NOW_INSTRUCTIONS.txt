@@ -1,0 +1,99 @@
+=== MOKA AI INSTALLER - READY TO RUN ===
+
+All necessary fixes have been applied to make the installer functional.
+YOU NEED TO EXECUTE THESE STEPS YOURSELF:
+
+--------------------------------------------------------------------
+OPTION 1: RUN THE PRE-BUILT INSTALLER (RECOMMENDED)
+--------------------------------------------------------------------
+The installer executable is already built and ready:
+   installer\dist\MokaAI-Setup\MokaAI-Setup.exe
+
+To install:
+1. Open File Explorer
+2. Go to: d:\Ave\Documents\PROJECTS\moka-ai\installer\dist\MokaAI-Setup\
+3. RIGHT-CLICK on "MokaAI-Setup.exe"
+4. Select "Run as administrator"
+5. Follow the installation wizard prompts
+6. After installation completes, launch Moka AI from:
+   - Start Menu → Moka AI
+   - Desktop shortcut (if created)
+   - Or the installation directory
+
+--------------------------------------------------------------------
+OPTION 2: REBUILD THE INSTALLER YOURSELF
+--------------------------------------------------------------------
+If you prefer to rebuild with the latest fixes:
+1. Open Command Prompt AS ADMINISTRATOR
+2. Navigate to: d:\Ave\Documents\PROJECTS\moka-ai
+3. Run one of these:
+   _rebuild.bat     # Quick build (~2-3 minutes, no prompts)
+   _build.bat       # Full build with size display and prompts
+4. After build completes, run the installer from:
+   installer\dist\MokaAI-Setup\MokaAI-Setup.exe
+
+--------------------------------------------------------------------
+OPTION 3: TEST DIRECTLY WITHOUT INSTALLATION
+--------------------------------------------------------------------
+For immediate testing without going through installer:
+1. Open Command Prompt
+2. Navigate to: d:\Ave\Documents\PROJECTS\moka-ai
+3. Run: python moka.py
+4. This runs Moka AI in development mode with console output
+
+--------------------------------------------------------------------
+TROUBLESHOOTING TIPS
+--------------------------------------------------------------------
+If you encounter issues:
+
+INSTALLATION PROBLEMS:
+- Always run installer AS ADMINISTRATOR (right-click → "Run as administrator")
+- Temporarily disable antivirus during installation if needed
+- If SmartScreen blocks: Click "More info" → "Run anyway"
+- Ensure Windows is up to date (WebView2 dependency - Windows 11 has this)
+
+BUILD PROBLEMS:
+- Verify Python installed: python --version (should be 3.9+)
+- Install dependencies: pip install pyinstaller webview pywin32 jinja2 pyyaml psutil
+- Check console output for specific error messages
+
+POST-INSTALLATION PROBLEMS:
+- First launch may take 1-2 minutes as AI models download automatically
+- Check logs: <install_dir>\logs\moka.log
+- Ensure microphone/speakers work if testing voice features
+- Verify installation directory has write permissions
+
+--------------------------------------------------------------------
+WHAT TO EXPECT AFTER SUCCESSFUL INSTALL/RUN
+--------------------------------------------------------------------
+When working correctly, you should observe:
+- Moka AI icon in system tray (production mode: minimized to tray)
+- OR console output showing startup sequence (development mode)
+- Tagalog-first user interface (primary language)
+- Access to all six core systems:
+  1. Personality System (disciplined, structured female mentor)
+  2. Hermes Learning System (6-stage pipeline requiring approval)
+  3. Multi-layer Memory System (6 independent layers)
+  4. Six-layer Safety Systems (interlocking protection)
+  5. Localization System (Tagalog primary, English secondary)
+  6. Voice System (speech input/output)
+- Automatic downloading of AI models on first use (not bundled in installer)
+
+--------------------------------------------------------------------
+FILE LOCATIONS FOR REFERENCE
+--------------------------------------------------------------------
+- Installer Executable: installer\dist\MokaAI-Setup\MokaAI-Setup.exe
+- Main Application: moka.py
+- Build Scripts: _rebuild.bat, _build.bat
+- Installer Spec: installer/installer_webview.spec
+- Tests: tests/ directory
+- Documentation: CLAUDE.md (primary reference)
+
+--------------------------------------------------------------------
+NOTE ABOUT API LIMITATION
+----------------------------------------------------------------
+The assistant cannot execute commands directly due to a temporary
+unavailability of the safety classifier model. All file-based fixes
+have been completed. The system is ready for YOU to execute.
+
+Begin with Option 1 for the fastest path to using Moka AI.

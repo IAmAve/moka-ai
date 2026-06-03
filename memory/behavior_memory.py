@@ -13,7 +13,12 @@ class BehaviorMemory:
 
     def __init__(self, storage_file: str = "behavior_memory.json", logger=None):
         self._logger = logger
-        self._log = logger.info if logger else lambda m: None
+        if logger and hasattr(logger, 'info'):
+            self._log = logger.info
+        elif callable(logger):
+            self._log = logger
+        else:
+            self._log = lambda m: None
         self.storage_file = storage_file
         self.memory_store: Dict[str, Any] = {}
         self._load_memory()

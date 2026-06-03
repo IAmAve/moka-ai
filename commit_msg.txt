@@ -1,0 +1,1 @@
+Merge phase-9-workflow: Complete Phase 13 PyWebView installer wizard + main app UI + Project MOKA logo. Includes hardware detection, model selection, and cross-platform build specs.

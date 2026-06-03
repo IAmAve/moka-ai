@@ -59,7 +59,7 @@ class DepResolver:
     ]
 
     INSTALLER_PACKAGES = [
-        "dearpygui>=1.90",
+        "pywebview>=4.0",
         "pyinstaller>=6.0",
     ]
 

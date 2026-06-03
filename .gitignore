@@ -11,7 +11,8 @@ build/
 
 # PyInstaller
 *.spec
-!MokaAI-Setup.spec
+!installer/
+!platforms/
 MokaAI-Setup.exe
 uninstall_moka.exe
 
@@ -23,6 +24,10 @@ logs/
 temp/
 *.tmp
 
+# Generated data
+software_profiles.json
+workflows/templates/
+
 # IDE
 .vscode/
 .idea/
@@ -30,7 +35,6 @@ temp/
 # OS
 .DS_Store
 Thumbs.db
-nul
 
 # Test coverage
 .coverage

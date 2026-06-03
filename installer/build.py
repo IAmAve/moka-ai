@@ -22,7 +22,7 @@ import shutil
 from pathlib import Path
 
 PLATFORM_SPECS = {
-    "win32": "installer_webview.spec",  # WebView2 wizard on Windows
+    "win32": "installer_webview.spec",          # WebView2 wizard on Windows
     "darwin": "platforms/macos-dmg.spec",
     "linux": "platforms/linux-appimage.spec",
 }

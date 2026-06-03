@@ -33,56 +33,41 @@
   // ── Socket.IO ─────────────────────────────────────────────
   const socket = io({ path: '/socket.io/', transports: ['websocket', 'polling'] });
 
-  socket.on("connect", () => {
+  socket.on('connect', () => {
     console.log('Socket connected', socket.id);
   });
-  socket.on("disconnect", () => {
+  socket.on('disconnect', () => {
     console.log('Socket disconnected');
   });
 
   // Incoming events
-  socket.on("message", data => {
+  socket.on('message', data => {
     messages.push(data);
     renderMessages();
   });
-  socket.on("voice_transcript", data => {
+  socket.on('voice_transcript', data => {
     appendTranscript(data.speaker, data.text, data.ts);
   });
-  socket.on("orb_state", data => {
+  socket.on('orb_state', data => {
     setOrbVoiceState(data.state);
   });
-  socket.on("memory_update", data => {
+  socket.on('memory_update', data => {
     renderMemory(data);
   });
-  socket.on("skill_update", data => {
+  socket.on('skill_update', data => {
     renderSkills(data);
   });
-  socket.on("task_update", data => {
+  socket.on('task_update', data => {
     renderTasks(data);
   });
-  socket.on("resource_update", data => {
+  socket.on('resource_update', data => {
     renderResources(data);
   });
-  socket.on("learning_update", data => {
+  socket.on('learning_update', data => {
     renderLearning(data);
   });
-  socket.on("history_events", data => {
+  socket.on('history_events', data => {
     renderHistory(data);
-  });
-  socket.on("conversation_list", data => {
-    updateConversationList(data);
-  });
-  socket.on("agent_state", data => {
-    // Handle agent state updates from backend
-    // This keeps the frontend in sync with the backend\s overall agent state
-    // Individual components handle their specific updates through other events
-    // This could be used for general state synchronization if needed
-  });
-  
-  socket.on("agent_event", data => {
-    // Handle generic agent events from backend
-    // This could be used for various agent-related notifications
-    // Individual components may handle specific event types through their own handlers
   });
 
   // ── Panel Switching ────────────────────────────────────────
@@ -159,17 +144,17 @@
     const text = input?.value.trim();
     if (!text) return;
     input.value = '';
-    socket.emit("message", { content: text });
+    socket.emit('message', { content: text });
   }
 
   // ── Voice ──────────────────────────────────────────────────
   const voiceBtn = document.getElementById('voice-push');
   if (voiceBtn) {
-    voiceBtn.addEventListener('mousedown', () => { socket.emit("mic_start"); setOrbVoiceState('LISTENING'); });
-    voiceBtn.addEventListener('mouseup',   () => { socket.emit("mic_stop");  setOrbVoiceState('THINKING'); });
-    voiceBtn.addEventListener('mouseleave',()=> { socket.emit("mic_stop"); });
-    voiceBtn.addEventListener('touchstart',e=> { e.preventDefault(); socket.emit("mic_start"); setOrbVoiceState('LISTENING'); }, { passive: false });
-    voiceBtn.addEventListener('touchend',  e=> { e.preventDefault(); socket.emit("mic_stop"); setOrbVoiceState('THINKING'); }, { passive: false });
+    voiceBtn.addEventListener('mousedown', () => { socket.emit('mic_start'); setOrbVoiceState('LISTENING'); });
+    voiceBtn.addEventListener('mouseup',   () => { socket.emit('mic_stop');  setOrbVoiceState('THINKING'); });
+    voiceBtn.addEventListener('mouseleave',()=> { socket.emit('mic_stop'); });
+    voiceBtn.addEventListener('touchstart',e=> { e.preventDefault(); socket.emit('mic_start'); setOrbVoiceState('LISTENING'); }, { passive: false });
+    voiceBtn.addEventListener('touchend',  e=> { e.preventDefault(); socket.emit('mic_stop'); setOrbVoiceState('THINKING'); }, { passive: false });
   }
 
   function appendTranscript(speaker, text, ts) {
@@ -199,19 +184,6 @@
       <div class="memory-item">
         <div class="mem-type">${safeText(m.type || 'memory')}</div>
         <div>${safeText(m.content || m.text || '')}</div>
-      </div>
-    `).join('');
-  }
-
-  // ── Conversations ──────────────────────────────────────────
-  function updateConversationList(data) {
-    const el = document.getElementById('conversation-list');
-    if (!el || !data?.conversations) return;
-    el.innerHTML = data.conversations.map(c => `
-      <div class="conversation-item">
-        <div class="conversation-title">${safeText(c.title || 'Untitled')}</div>
-        <div class="conversation-preview">${safeText(c.preview || '')}</div>
-        ${c.ts ? `<div class="conversation-time">${fmtTime(c.ts)}</div>` : ''}
       </div>
     `).join('');
   }
@@ -248,7 +220,7 @@
     el.querySelectorAll('.task-check').forEach(chk => {
       chk.addEventListener('click', () => {
         chk.classList.toggle('done');
-        socket.emit("task_toggle", { id: chk.dataset.id });
+        socket.emit('task_toggle', { id: chk.dataset.id });
       });
     });
   }
@@ -321,10 +293,10 @@
 
   // ── Settings ───────────────────────────────────────────────
   document.getElementById('btn-clear-history')?.addEventListener('click', () => {
-    if (confirm('Clear all chat history?')) socket.emit("clear_history");
+    if (confirm('Clear all chat history?')) socket.emit('clear_history');
   });
   document.getElementById('btn-export-memory')?.addEventListener('click', () => {
-    socket.emit("export_memory");
+    socket.emit('export_memory');
   });
 
   // ── Helpers ────────────────────────────────────────────────

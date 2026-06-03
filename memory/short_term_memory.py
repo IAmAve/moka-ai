@@ -14,7 +14,10 @@ class ShortTermMemory:
 
     def __init__(self, max_items: int = 100, logger=None):
         self._logger = logger
-        self._log = logger.info if logger else lambda m: None
+        if logger and hasattr(logger, 'info'):
+            self._log = lambda m: logger.info(m)
+        else:
+            self._log = lambda m: None
         self.memory_store: dict = {}
         self.max_items = max_items
         self.access_count: dict = {}

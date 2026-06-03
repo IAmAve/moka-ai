@@ -30,18 +30,24 @@ class ConfidenceScoringSystem:
         accuracy_score = self._calculate_accuracy(behavior_pattern)
         consistency_score = self._calculate_consistency(behavior_pattern)
         frequency_score = self._calculate_frequency(behavior_pattern)
+        recency_score = self._calculate_recency(behavior_pattern)
+        context_match_score = self._calculate_context_match(behavior_pattern)
 
         # Weighted average of all factors
         weights = {
-            'accuracy': 0.4,
-            'consistency': 0.3,
-            'frequency': 0.3
+            'accuracy': 0.25,
+            'consistency': 0.2,
+            'frequency': 0.2,
+            'recency': 0.2,
+            'context_match': 0.15
         }
 
         confidence = (
             weights['accuracy'] * accuracy_score +
             weights['consistency'] * consistency_score +
-            weights['frequency'] * frequency_score
+            weights['frequency'] * frequency_score +
+            weights['recency'] * recency_score +
+            weights['context_match'] * context_match_score
         )
 
         return min(confidence, 1.0)  # Cap at 1.0
@@ -90,6 +96,44 @@ class ConfidenceScoringSystem:
         ratio = observed_count / expected_count
         # Cap at 1.0 (more than expected is still good)
         return min(ratio, 1.0)
+
+    def _calculate_recency(self, behavior_pattern: Dict[str, Any]) -> float:
+        """Calculate recency score based on how recently the behavior was observed"""
+        last_observed = behavior_pattern.get('last_observed')
+        if not last_observed:
+            return 0.0
+
+        # Convert to datetime if it's a string
+        if isinstance(last_observed, str):
+            try:
+                last_observed = datetime.fromisoformat(last_observed)
+            except ValueError:
+                return 0.0
+
+        # Calculate time difference in hours
+        time_diff = datetime.now() - last_observed
+        hours_diff = time_diff.total_seconds() / 3600
+
+        # Apply exponential decay: score = e^(-hours/half_life)
+        # Using 168 hours (1 week) as half-life for meaningful decay
+        half_life_hours = 168.0
+        recency_score = pow(0.5, hours_diff / half_life_hours)
+
+        return max(0.0, min(1.0, recency_score))
+
+    def _calculate_context_match(self, behavior_pattern: Dict[str, Any]) -> float:
+        """Calculate context match score based on similarity to current context"""
+        # For now, return a neutral score since we don't have current context
+        # In a full implementation, this would compare behavior_pattern['context_data']
+        # with the current operational context
+        context_data = behavior_pattern.get('context_data', {})
+        if not context_data:
+            # No context data = neutral score
+            return 0.5
+
+        # Simple implementation: if we have context data, assume moderate match
+        # A full implementation would compare with current context
+        return 0.6  # Slightly positive for having context data
 
     def update_confidence_based_on_feedback(self, pattern_id: str, feedback: str, metrics: Dict[str, float]):
         """Update confidence metrics based on user feedback"""
